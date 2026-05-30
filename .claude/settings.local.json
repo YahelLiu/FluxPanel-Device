@@ -25,7 +25,10 @@
       "Bash(git add *)",
       "Bash(git commit -m 'Initial commit: ESP32-C3 Motor Control System *)",
       "Bash(gh auth *)",
-      "Bash(git commit -m 'Rename project to FluxPanel-Device *)"
+      "Bash(git commit -m 'Rename project to FluxPanel-Device *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)"
     ]
   }
 }

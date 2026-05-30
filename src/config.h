@@ -116,6 +116,54 @@
 #define ALARM_STALL_TIMEOUT 3000             // 堵转超时 (ms)
 
 // ============================================================================
+// MQTT 配置 (IoT 数据上云)
+// ============================================================================
+#define MQTT_ENABLED true                    // 启用/禁用 MQTT 功能
+
+// MQTT Broker 选择 (取消注释对应行)
+#define MQTT_BROKER_EMQX                     // EMQX 公共测试服务器 (免费)
+// #define MQTT_BROKER_ALIYUN                // 阿里云 IoT (需要三元组)
+// #define MQTT_BROKER_CUSTOM               // 自定义 Broker
+
+// EMQX 公共 Broker (测试用, 免费无需注册)
+#ifdef MQTT_BROKER_EMQX
+    #define MQTT_SERVER    "broker.emqx.io"
+    #define MQTT_PORT      1883
+    #define MQTT_USER      ""                // 无需认证
+    #define MQTT_PASSWORD  ""
+#endif
+
+// 阿里云 IoT Platform (生产环境)
+#ifdef MQTT_BROKER_ALIYUN
+    // 替换为你的阿里云 IoT 三元组
+    #define MQTT_SERVER    "*.iot-as-mqtt.cn-shanghai.aliyuncs.com"
+    #define MQTT_PORT      1883
+    #define MQTT_PRODUCT_KEY    "your_product_key"
+    #define MQTT_DEVICE_NAME    "your_device_name"
+    #define MQTT_DEVICE_SECRET  "your_device_secret"
+#endif
+
+// 自定义 Broker
+#ifdef MQTT_BROKER_CUSTOM
+    #define MQTT_SERVER    "your_broker_ip"
+    #define MQTT_PORT      1883
+    #define MQTT_USER      "username"
+    #define MQTT_PASSWORD  "password"
+#endif
+
+// MQTT 主题配置
+#define MQTT_TOPIC_DATA       "fluxpanel/device/data"      // 数据上报主题
+#define MQTT_TOPIC_STATUS     "fluxpanel/device/status"    // 在线状态主题
+#define MQTT_TOPIC_COMMAND    "fluxpanel/device/cmd"       // 命令下发主题
+#define MQTT_TOPIC_ALARM      "fluxpanel/device/alarm"     // 告警主题
+
+// MQTT 参数
+#define MQTT_KEEPALIVE        60                           // 心跳间隔 (秒)
+#define MQTT_QOS              1                            // QoS 级别 (0, 1, 2)
+#define MQTT_RECONNECT_MS     5000                         // 重连间隔 (毫秒)
+#define MQTT_PUBLISH_MS       5000                         // 发布间隔 (毫秒)
+
+// ============================================================================
 // 调试配置
 // ============================================================================
 #define DEBUG_SERIAL Serial

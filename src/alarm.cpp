@@ -9,6 +9,7 @@
 #include "esc_pwm.h"
 #include "relay.h"
 #include "pid_controller.h"
+#include "mqtt.h"
 
 // ============================================================================
 // 内部状态
@@ -91,7 +92,11 @@ void alarm_trigger(AlarmType type) {
     alarmState.active_alarm = type;
     alarmState.alarm_time = millis();
 
-    DEBUG_PRINTF("[ALARM] *** TRIGGERED: %s ***\n", alarm_get_name(type));
+    const char* alarmName = alarm_get_name(type);
+    DEBUG_PRINTF("[ALARM] *** TRIGGERED: %s ***\n", alarmName);
+
+    // 发布 MQTT 告警
+    mqtt_publish_alarm(alarmName, "Alarm triggered on device");
 
     // 紧急停机
     esc_stop();

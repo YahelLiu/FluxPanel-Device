@@ -26,6 +26,7 @@
 #include "ina219_sensor.h"
 #include "alarm.h"
 #include "motor_fsm.h"
+#include "mqtt.h"
 
 // ============================================================================
 // 全局状态
@@ -37,6 +38,7 @@ SystemStatus systemStatus;  // 系统状态 (Yves-PC 数据)
 
 unsigned long lastStatusTime = 0;      // 上次状态上报时间
 unsigned long lastDisplayTime = 0;     // 上次显示更新时间
+unsigned long lastMqttTime = 0;        // 上次 MQTT 发布时间
 unsigned long startTime = 0;           // 系统启动时间
 
 bool currentWsState = false;           // 当前 WS 连接状态
@@ -324,6 +326,9 @@ void setup() {
     ws_init();
     ws_set_command_callback(onCommandReceived);
 
+    // 初始化 MQTT
+    mqtt_init();
+
     // 初始化 PID 控制器
     pid_init(PID_KP, PID_KI, PID_KD);
 
@@ -343,7 +348,10 @@ void setup() {
 
 void loop() {
     // FreeRTOS 模式: 大部分工作由任务处理
-    // 这里只处理状态上报
+    // 这里只处理状态上报和 MQTT
+
+    // MQTT 循环 (处理心跳、重连、消息)
+    mqtt_loop();
 
     // 定时上报状态
     if (millis() - lastStatusTime >= STATUS_INTERVAL) {
@@ -352,9 +360,22 @@ void loop() {
         // 更新运行时间
         deviceStatus.uptime = (millis() - startTime) / 1000;
 
-        // 发送状态
+        // WebSocket 状态上报
         if (deviceStatus.ws_connected) {
             ws_send_status(motorState);
+        }
+    }
+
+    // 定时 MQTT 数据上报
+    if (mqtt_is_connected() && millis() - lastMqttTime >= MQTT_PUBLISH_MS) {
+        lastMqttTime = millis();
+
+        // 发布设备数据
+        mqtt_publish_data(motorState, deviceStatus);
+
+        // 发布 PC 系统状态 (如果有)
+        if (systemStatus.valid) {
+            mqtt_publish_system_status(systemStatus);
         }
     }
 
