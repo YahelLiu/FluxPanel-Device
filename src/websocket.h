@@ -1,6 +1,8 @@
 /**
  * @file websocket.h
  * @brief WebSocket Communication Module Header
+ *
+ * 改进: 使用命令队列传递命令，防止覆盖
  */
 
 #pragma once
@@ -46,6 +48,7 @@ void ws_send_ack(uint32_t command_id, bool success, String message);
 /**
  * @brief 设置命令回调函数
  * @param callback 回调函数
+ * @deprecated 改用命令队列，此函数保留兼容性
  */
 void ws_set_command_callback(CommandCallback callback);
 

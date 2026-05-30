@@ -1,10 +1,13 @@
 /**
  * @file websocket.cpp
  * @brief WebSocket Communication Module Implementation
+ *
+ * 改进: 使用命令队列传递命令，防止覆盖丢失
  */
 
 #include "websocket.h"
 #include "config.h"
+#include "rtos_tasks.h"  // 改进: 命令队列
 
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
@@ -15,7 +18,7 @@ static WebSocketsClient webSocket;
 // 连接状态
 static bool wsConnected = false;
 
-// 命令回调
+// 命令回调 (保留兼容性)
 static CommandCallback commandCallback = nullptr;
 
 // 最后错误消息
@@ -139,7 +142,20 @@ static void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
                 DEBUG_PRINTF("[WS] Command: %s (id: %u)\n",
                     cmd.command.c_str(), cmd.command_id);
 
-                commandCallback(cmd);
+                // ---- 改进: 发送命令到队列 (防止覆盖) ----
+                if (commandQueue != nullptr) {
+                    if (xQueueSend(commandQueue, &cmd, pdMS_TO_TICKS(CMD_QUEUE_TIMEOUT)) != pdPASS) {
+                        DEBUG_PRINTLN("[WS] WARNING: Command queue full, command dropped!");
+                        lastError = "Command queue full";
+                    } else {
+                        DEBUG_PRINTLN("[WS] Command sent to queue");
+                    }
+                } else {
+                    // 队列未初始化，使用旧方式 (兼容性)
+                    if (commandCallback) {
+                        commandCallback(cmd);
+                    }
+                }
             }
             // 处理心跳响应
             else if (msgType && strcmp(msgType, "pong") == 0) {

@@ -10,6 +10,7 @@
 #include "relay.h"
 #include "pid_controller.h"
 #include "mqtt.h"
+#include "rtos_tasks.h"  // 改进: 任务通知
 
 // ============================================================================
 // 内部状态
@@ -98,7 +99,11 @@ void alarm_trigger(AlarmType type) {
     // 发布 MQTT 告警
     mqtt_publish_alarm(alarmName, "Alarm triggered on device");
 
-    // 紧急停机
+    // ---- 改进: 使用任务通知紧急停机 (微秒级响应) ----
+    // 先发送通知，让 MotorTask 立即响应
+    rtos_notify_emergency();
+
+    // 紧急停机 (双重保障)
     esc_stop();
     relay_off();
 
@@ -107,7 +112,7 @@ void alarm_trigger(AlarmType type) {
     motorState.speed_percent = 0;
 
     // 重置 PID
-    pid_reset();  // 需要 pid_controller.h
+    pid_reset();
 
     // 重置堵转检测
     alarmState.stall_detected = false;

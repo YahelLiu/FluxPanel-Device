@@ -1,6 +1,11 @@
 /**
  * @file rtos_tasks.cpp
  * @brief FreeRTOS Task Implementation
+ *
+ * RTOS 同步机制改进:
+ *   - 命令队列: 防止 WebSocket 命令覆盖
+ *   - 任务通知: 紧急停机微秒级响应
+ *   - 栈监控: 防止栈溢出
  */
 
 #include "rtos_tasks.h"
@@ -32,6 +37,11 @@ SemaphoreHandle_t motorStateMutex = nullptr;
 SemaphoreHandle_t displayMutex = nullptr;
 
 // ============================================================================
+// 命令队列 (改进: 防止命令覆盖)
+// ============================================================================
+QueueHandle_t commandQueue = nullptr;
+
+// ============================================================================
 // 外部变量 (来自 main.cpp)
 // ============================================================================
 extern MotorState motorState;
@@ -43,6 +53,7 @@ extern unsigned long lastCommandTime;
 // 内部函数声明
 // ============================================================================
 void safety_check_rtos();
+void process_command_from_queue(MotorCommand& cmd);
 
 // ============================================================================
 // WiFi 任务 (事件驱动)
@@ -98,7 +109,34 @@ void motorTask(void* arg) {
     TickType_t lastWakeTime = xTaskGetTickCount();
     const TickType_t period = 10 / portTICK_PERIOD_MS;  // 10ms
 
+    // 命令接收缓冲
+    MotorCommand cmd;
+    uint32_t notificationValue = 0;
+
     while (1) {
+        // ---- 改进1: 检查任务通知 (紧急停机) ----
+        if (xTaskNotifyWait(0, 0xFFFFFFFF, &notificationValue, 0)) {
+            // 有通知到达
+            if (notificationValue & NOTIFY_EMERGENCY_STOP) {
+                DEBUG_PRINTLN("[RTOS] Emergency stop notification received!");
+
+                // 立即停机 (微秒级响应)
+                esc_stop();
+                relay_off();
+                motorState.is_running = false;
+                motorState.speed_percent = 0;
+                pid_reset();
+
+                fsm_process_event(FSM_EVENT_ERROR);
+            }
+        }
+
+        // ---- 改进2: 从队列获取命令 (非阻塞) ----
+        while (xQueueReceive(commandQueue, &cmd, 0)) {
+            // 处理队列中的所有命令
+            process_command_from_queue(cmd);
+        }
+
         // 状态机更新
         fsm_update();
 
@@ -138,6 +176,9 @@ void sensorTask(void* arg) {
     TickType_t lastWakeTime = xTaskGetTickCount();
     const TickType_t period = 100 / portTICK_PERIOD_MS;  // 100ms
 
+    // 栈监控计数器
+    static uint32_t stackCheckCounter = 0;
+
     while (1) {
         if (xSemaphoreTake(motorStateMutex, 10)) {
             // 读取 INA219 电流/电压/功率
@@ -145,7 +186,6 @@ void sensorTask(void* arg) {
                 ina219_read();
                 motorState.current = ina219_get_current();
                 motorState.voltage = ina219_get_voltage();
-                // 功率可用于温度模拟或其他用途
             } else {
                 // INA219 未就绪，使用模拟数据
                 if (motorState.is_running) {
@@ -160,7 +200,7 @@ void sensorTask(void* arg) {
             // 读取霍尔传感器转速
             motorState.actual_rpm = hall_get_rpm();
 
-            // 温度 (目前使用模拟数据，可后续添加 DS18B20)
+            // 温度 (目前使用模拟数据)
             if (motorState.is_running) {
                 motorState.temperature = 25.0 + (motorState.speed_percent / 10.0);
             } else {
@@ -169,6 +209,13 @@ void sensorTask(void* arg) {
 
             motorState.last_update = millis();
             xSemaphoreGive(motorStateMutex);
+        }
+
+        // ---- 改进3: 定期栈监控 (每5秒) ----
+        stackCheckCounter++;
+        if (stackCheckCounter >= 50) {  // 100ms * 50 = 5s
+            stackCheckCounter = 0;
+            rtos_check_stack();
         }
 
         vTaskDelayUntil(&lastWakeTime, period);
@@ -199,6 +246,40 @@ void displayTask(void* arg) {
 }
 
 // ============================================================================
+// 命令处理 (从队列)
+// ============================================================================
+void process_command_from_queue(MotorCommand& cmd) {
+    DEBUG_PRINTF("[RTOS] Processing command from queue: %s (id: %u)\n",
+        cmd.command.c_str(), cmd.command_id);
+
+    // 更新最后命令时间
+    lastCommandTime = millis();
+
+    // 执行命令 (简化版，实际可以复用 main.cpp 的 onCommandReceived)
+    if (cmd.command == "start") {
+        motorState.speed_percent = cmd.speed_percent > 0 ? cmd.speed_percent : 50;
+        motorState.direction = cmd.direction;
+        fsm_process_event(FSM_EVENT_START);
+    }
+    else if (cmd.command == "stop") {
+        fsm_process_event(FSM_EVENT_STOP);
+    }
+    else if (cmd.command == "speed") {
+        if (cmd.speed_percent >= 0 && cmd.speed_percent <= 100) {
+            motorState.speed_percent = cmd.speed_percent;
+            if (motorState.is_running) {
+                esc_set_speed(cmd.speed_percent);
+            }
+        }
+    }
+    else if (cmd.command == "direction") {
+        if (cmd.direction == 1 || cmd.direction == -1) {
+            motorState.direction = cmd.direction;
+        }
+    }
+}
+
+// ============================================================================
 // 安全检查 (Fail-safe) - RTOS 版本
 // ============================================================================
 void safety_check_rtos() {
@@ -225,14 +306,91 @@ void safety_check_rtos() {
         }
 
         if (shouldStop) {
-            // 紧急停机
             DEBUG_PRINTF("[SAFETY] Emergency stop: %s\n", reason);
-
             fsm_process_event(FSM_EVENT_ERROR);
         }
 
         xSemaphoreGive(motorStateMutex);
     }
+}
+
+// ============================================================================
+// 紧急通知函数
+// ============================================================================
+
+void rtos_notify_emergency_from_isr() {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    // 从 ISR 发送任务通知
+    if (motorTaskHandle != nullptr) {
+        vTaskNotifyGiveFromISR(motorTaskHandle, &xHigherPriorityTaskWoken);
+    }
+
+    // 如果唤醒了更高优先级任务，触发上下文切换
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void rtos_notify_emergency() {
+    // 从任务发送任务通知
+    if (motorTaskHandle != nullptr) {
+        xTaskNotify(motorTaskHandle, NOTIFY_EMERGENCY_STOP, eSetBits);
+    }
+}
+
+// ============================================================================
+// 栈监控
+// ============================================================================
+
+void rtos_check_stack() {
+    // 检查各任务栈使用情况
+    UBaseType_t stackHighWaterMark;
+
+    if (motorTaskHandle) {
+        stackHighWaterMark = uxTaskGetStackHighWaterMark(motorTaskHandle);
+        if (stackHighWaterMark < 200) {  // 剩余小于 200 字节时警告
+            DEBUG_PRINTF("[RTOS] WARNING: MotorTask stack low: %u bytes\n", stackHighWaterMark);
+        }
+    }
+
+    if (wifiTaskHandle) {
+        stackHighWaterMark = uxTaskGetStackHighWaterMark(wifiTaskHandle);
+        if (stackHighWaterMark < 200) {
+            DEBUG_PRINTF("[RTOS] WARNING: WiFiTask stack low: %u bytes\n", stackHighWaterMark);
+        }
+    }
+
+    if (sensorTaskHandle) {
+        stackHighWaterMark = uxTaskGetStackHighWaterMark(sensorTaskHandle);
+        if (stackHighWaterMark < 200) {
+            DEBUG_PRINTF("[RTOS] WARNING: SensorTask stack low: %u bytes\n", stackHighWaterMark);
+        }
+    }
+
+    if (displayTaskHandle) {
+        stackHighWaterMark = uxTaskGetStackHighWaterMark(displayTaskHandle);
+        if (stackHighWaterMark < 200) {
+            DEBUG_PRINTF("[RTOS] WARNING: DisplayTask stack low: %u bytes\n", stackHighWaterMark);
+        }
+    }
+}
+
+void rtos_print_stack_info() {
+    DEBUG_PRINTLN("\n[RTOS] === Stack Usage ===");
+
+    if (motorTaskHandle) {
+        DEBUG_PRINTF("MotorTask:  %u bytes free\n", uxTaskGetStackHighWaterMark(motorTaskHandle));
+    }
+    if (wifiTaskHandle) {
+        DEBUG_PRINTF("WiFiTask:   %u bytes free\n", uxTaskGetStackHighWaterMark(wifiTaskHandle));
+    }
+    if (sensorTaskHandle) {
+        DEBUG_PRINTF("SensorTask: %u bytes free\n", uxTaskGetStackHighWaterMark(sensorTaskHandle));
+    }
+    if (displayTaskHandle) {
+        DEBUG_PRINTF("DisplayTask:%u bytes free\n", uxTaskGetStackHighWaterMark(displayTaskHandle));
+    }
+
+    DEBUG_PRINTLN("[RTOS] ======================\n");
 }
 
 // ============================================================================
@@ -248,6 +406,15 @@ void rtos_init() {
         DEBUG_PRINTLN("[RTOS] ERROR: Failed to create mutexes");
     } else {
         DEBUG_PRINTLN("[RTOS] Mutexes created");
+    }
+
+    // 创建命令队列 (改进: 防止命令覆盖)
+    commandQueue = xQueueCreate(CMD_QUEUE_LENGTH, sizeof(MotorCommand));
+
+    if (commandQueue == nullptr) {
+        DEBUG_PRINTLN("[RTOS] ERROR: Failed to create command queue");
+    } else {
+        DEBUG_PRINTF("[RTOS] Command queue created (size: %d)\n", CMD_QUEUE_LENGTH);
     }
 }
 

@@ -18,6 +18,9 @@ pio device monitor -p COM3 -b 115200
 
 # Build and upload in one command
 pio run -t upload && pio device monitor
+
+# Clean build
+pio run -t clean
 ```
 
 ## Architecture Overview
@@ -29,6 +32,18 @@ This is an ESP32-C3 based brushless motor control system with WebSocket connecti
 - **config.h** - Central configuration: WiFi, WebSocket server, GPIO pins, PID parameters, safety thresholds
 - **main.cpp** - Initialization sequence and command dispatch
 - **motor_state.h** - Data structures for `MotorState`, `DeviceStatus`, `SystemStatus`, `MotorCommand`
+- **motor_fsm.h/cpp** - Finite state machine for motor lifecycle
+- **rtos_tasks.h/cpp** - FreeRTOS task definitions and mutex management
+- **alarm.h/cpp** - Overcurrent, overtemperature, stall detection
+- **pid_controller.h/cpp** - Position-form PID with anti-windup
+- **esc_pwm.h/cpp** - 50Hz PWM generation for BLDC ESC control
+- **hall_sensor.h/cpp** - Interrupt-based RPM measurement
+- **ina219_sensor.h/cpp** - I2C current/voltage monitoring
+- **websocket.h/cpp** - WebSocket client with command parsing
+- **mqtt.h/cpp** - MQTT client for IoT data publishing
+- **display.h/cpp** - ST7735 TFT LCD output
+- **wifi_manager.h/cpp** - WiFiManager AP-based provisioning
+- **relay.h/cpp** - Fail-safe power control relay
 
 ### FreeRTOS Task Structure
 
@@ -70,6 +85,15 @@ All commands receive an ACK via `ws_send_ack()`.
 - Command timeout (10s default, `SAFETY_TIMEOUT`) → emergency stop
 - WiFi disconnect → FSM error event, alarm trigger
 - Hardware alarms: overcurrent, overtemperature, stall detection
+- Relay active-low: ESP32 boot/reset → relay OFF → power disconnected
+
+### Initialization Sequence (main.cpp setup())
+
+```
+Serial → Display → Relay → ESC PWM → Hall → INA219 → Alarm → FSM → WiFi → WebSocket → MQTT → PID → RTOS
+```
+
+Critical: `relay_init()` before `esc_init()` to ensure ESC power is off during PWM setup.
 
 ### Key Dependencies
 
@@ -78,6 +102,7 @@ All commands receive an ACK via `ws_send_ack()`.
 - WebSockets library
 - WiFiManager for AP-based provisioning
 - Adafruit INA219 current sensor (I2C)
+- PubSubClient for MQTT
 
 ## Configuration
 
@@ -89,3 +114,16 @@ Edit `src/config.h` before building:
 - GPIO pins for TFT, relay, ESC PWM, INA219, Hall sensor
 - PID tuning: `PID_KP`, `PID_KI`, `PID_KD`
 - Safety thresholds: `ALARM_OVERCURRENT_THRESHOLD`, `ALARM_OVERTEMP_THRESHOLD`
+
+### MQTT Configuration
+
+MQTT runs in parallel with WebSocket for IoT data publishing:
+
+- `MQTT_ENABLED`: Enable/disable MQTT functionality
+- `MQTT_BROKER_EMQX` / `MQTT_BROKER_ALIYUN` / `MQTT_BROKER_CUSTOM`: Select broker type
+- Topics: `fluxpanel/device/data`, `fluxpanel/device/status`, `fluxpanel/device/cmd`, `fluxpanel/device/alarm`
+- Publish interval: `MQTT_PUBLISH_MS` (default 5000ms)
+
+### LCD Toggle
+
+Set `USE_LCD` to `false` in config.h to disable LCD (saves RAM/power when headless).
