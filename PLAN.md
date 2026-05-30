@@ -1,11 +1,12 @@
-# ESP32-C3 Motor Control - 开发计划
+# FluxPanel Device - 开发计划
 
 ## 📋 项目概述
 
-基于 ESP32-C3 的无刷电机状态监测与远程控制系统，实现：
+FluxPanel 系统的 ESP32-C3 设备端，实现：
 - 远程监控 PC 状态（CPU/GPU/MEM）
-- 远程控制 BLDC 电机（启动/停止/调速）
+- 远程硬件控制（电机/继电器等）
 - LCD 实时显示系统状态
+- WebSocket 与 FluxPanel 后端通信
 
 ---
 

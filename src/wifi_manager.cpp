@@ -61,7 +61,7 @@ bool wifi_manager_init() {
     wm.setMinimumSignalQuality(20);
 
     // 设置标题 (网页顶部显示)
-    wm.setTitle("ESP32 Motor Control");
+    wm.setTitle("FluxPanel Device");
 
     // 尝试自动连接
     bool res = wm.autoConnect(WIFI_AP_NAME, WIFI_AP_PASSWORD);

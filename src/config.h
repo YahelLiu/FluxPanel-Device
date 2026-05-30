@@ -1,6 +1,6 @@
 /**
  * @file config.h
- * @brief ESP32-C3 Motor Control Configuration
+ * @brief FluxPanel Device Configuration
  *
  * 修改此文件中的配置参数以匹配你的实际环境
  */

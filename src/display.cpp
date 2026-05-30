@@ -66,7 +66,7 @@ void display_init() {
     tft.setTextColor(COLOR_TITLE);
     tft.setTextSize(1);
     tft.setCursor(5, Y_TITLE);
-    tft.print("ESP32 Motor Control");
+    tft.print("FluxPanel Device");
 
     // 分隔线
     tft.drawFastHLine(0, Y_TITLE + 12, 128, COLOR_TEXT);
@@ -377,7 +377,7 @@ void display_setup_mode(DeviceStatus& status) {
     tft.setTextColor(COLOR_TITLE);
     tft.setTextSize(1);
     tft.setCursor(5, y);
-    tft.print("ESP32 Motor Control");
+    tft.print("FluxPanel Device");
     y += 14;
 
     // 分隔线

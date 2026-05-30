@@ -1,6 +1,6 @@
-# ESP32-C3 Motor Control System
+# FluxPanel Device - ESP32-C3
 
-基于 ESP32-C3 的无刷电机状态监测与远程控制系统，对接 FluxPanel 前后端。
+FluxPanel 系统的 ESP32-C3 设备端，实现 PC 状态远程监控与硬件控制。
 
 ## 🎯 功能特性
 

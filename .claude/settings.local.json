@@ -22,7 +22,10 @@
       "WebFetch(domain:stm32world.com)",
       "WebFetch(domain:www.waveshare.com)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m 'Initial commit: ESP32-C3 Motor Control System *)",
+      "Bash(gh auth *)",
+      "Bash(git commit -m 'Rename project to FluxPanel-Device *)"
     ]
   }
 }

@@ -1,6 +1,6 @@
 /**
  * @file main.cpp
- * @brief ESP32-C3 Motor Control System Main Entry
+ * @brief FluxPanel Device - ESP32-C3 Main Entry
  *
  * 功能:
  * 1. WiFi 网页配网 (WiFiManager)
@@ -267,7 +267,7 @@ void setup() {
     delay(1000);
 
     DEBUG_PRINTLN("\n========================================");
-    DEBUG_PRINTLN("ESP32-C3 Motor Control System");
+    DEBUG_PRINTLN("FluxPanel Device - ESP32-C3");
     DEBUG_PRINTLN("========================================");
 
     // 记录启动时间
