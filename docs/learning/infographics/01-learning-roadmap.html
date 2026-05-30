@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLDC 电机控制学习路线 - ESP32</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.font.im/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'academic-bg': '#FAF7F0',
+            'academic-text': '#1F2933',
+            'academic-secondary': '#475569',
+            'academic-border': '#CBD5E1',
+            'academic-accent': '#1E40AF',
+          },
+          fontFamily: {
+            'serif': ['IBM Plex Serif', 'Noto Serif SC', 'Source Han Serif SC', 'serif'],
+            'mono': ['IBM Plex Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .block-wrapper { position: relative; }
+    .block-toolbar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .block-wrapper:hover .block-toolbar { opacity: 1; }
+    .export-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .export-btn:hover {
+      background: #EFF6FF;
+      border-color: #1E40AF;
+      color: #1E40AF;
+    }
+  </style>
+</head>
+<body class="bg-academic-bg font-serif antialiased">
+
+  <!-- Block Wrapper -->
+  <div class="block-wrapper">
+
+    <!-- Export Toolbar -->
+    <div class="block-toolbar">
+      <button class="export-btn" data-export-block="block-001">PNG</button>
+      <button class="export-btn" data-export-block-svg="block-001">SVG</button>
+      <button class="export-btn" data-copy-block="block-001">Copy</button>
+    </div>
+
+    <!-- Visual Block: Large (1600×900) -->
+    <div id="block-001" class="visual-block relative bg-[#FAF7F0]" data-export="block" data-size="large" style="width: 1600px; height: 900px; margin: 0 auto; overflow: hidden;">
+
+      <div class="relative z-10 flex flex-col px-[80px] py-[50px] h-full">
+
+      <!-- Title -->
+      <div class="mb-8">
+        <h1 class="text-[42px] font-semibold text-academic-text mb-3 leading-tight">ESP32 BLDC 电机控制学习路线</h1>
+        <p class="text-[20px] text-academic-secondary">从基础架构到安全保护，五阶段循序渐进</p>
+      </div>
+
+      <!-- Roadmap Content -->
+      <div class="flex flex-col justify-center flex-1">
+
+        <!-- Five Stages -->
+        <div class="flex justify-between items-start gap-4">
+
+          <!-- Stage 1 -->
+          <div class="flex flex-col items-center w-[280px]">
+            <div class="w-10 h-10 rounded-full bg-academic-accent text-white text-lg font-bold flex items-center justify-center mb-3 font-mono">1</div>
+            <div class="bg-white border-2 border-academic-border rounded-lg p-5 w-full">
+              <h3 class="text-lg font-semibold text-academic-text mb-2">基础入门</h3>
+              <p class="text-sm text-academic-secondary mb-3">项目架构与配置管理</p>
+              <ul class="text-sm text-academic-secondary space-y-1.5">
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>模块分层设计</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>config.h 配置模式</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>初始化顺序</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="flex items-center pt-12">
+            <svg width="32" height="16" viewBox="0 0 32 16">
+              <path d="M0 8 L24 8 M20 3 L28 8 L20 13" stroke="#475569" stroke-width="2" fill="none"/>
+            </svg>
+          </div>
+
+          <!-- Stage 2 -->
+          <div class="flex flex-col items-center w-[280px]">
+            <div class="w-10 h-10 rounded-full bg-academic-accent text-white text-lg font-bold flex items-center justify-center mb-3 font-mono">2</div>
+            <div class="bg-white border-2 border-academic-border rounded-lg p-5 w-full">
+              <h3 class="text-lg font-semibold text-academic-text mb-2">通信与控制</h3>
+              <p class="text-sm text-academic-secondary mb-3">WebSocket 与 PWM 信号</p>
+              <ul class="text-sm text-academic-secondary space-y-1.5">
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>WiFiManager 配网</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>JSON 协议设计</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>ESC PWM 原理</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="flex items-center pt-12">
+            <svg width="32" height="16" viewBox="0 0 32 16">
+              <path d="M0 8 L24 8 M20 3 L28 8 L20 13" stroke="#475569" stroke-width="2" fill="none"/>
+            </svg>
+          </div>
+
+          <!-- Stage 3 -->
+          <div class="flex flex-col items-center w-[280px]">
+            <div class="w-10 h-10 rounded-full bg-academic-accent text-white text-lg font-bold flex items-center justify-center mb-3 font-mono">3</div>
+            <div class="bg-white border-2 border-academic-border rounded-lg p-5 w-full">
+              <h3 class="text-lg font-semibold text-academic-text mb-2">RTOS 多任务</h3>
+              <p class="text-sm text-academic-secondary mb-3">FreeRTOS 实战</p>
+              <ul class="text-sm text-academic-secondary space-y-1.5">
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>任务优先级设计</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>互斥锁与同步</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>精确周期控制</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="flex items-center pt-12">
+            <svg width="32" height="16" viewBox="0 0 32 16">
+              <path d="M0 8 L24 8 M20 3 L28 8 L20 13" stroke="#475569" stroke-width="2" fill="none"/>
+            </svg>
+          </div>
+
+          <!-- Stage 4 -->
+          <div class="flex flex-col items-center w-[280px]">
+            <div class="w-10 h-10 rounded-full bg-academic-accent text-white text-lg font-bold flex items-center justify-center mb-3 font-mono">4</div>
+            <div class="bg-white border-2 border-academic-border rounded-lg p-5 w-full">
+              <h3 class="text-lg font-semibold text-academic-text mb-2">PID 控制</h3>
+              <p class="text-sm text-academic-secondary mb-3">闭环控制算法</p>
+              <ul class="text-sm text-academic-secondary space-y-1.5">
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>PID 算法原理</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>积分抗饱和</li>
+                <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>霍尔测速</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Stage 5: Highlighted -->
+        <div class="flex justify-center mt-8">
+          <div class="flex items-center gap-4">
+            <svg width="32" height="16" viewBox="0 0 32 16">
+              <path d="M0 8 L24 8 M20 3 L28 8 L20 13" stroke="#475569" stroke-width="2" fill="none"/>
+            </svg>
+            <div class="flex flex-col items-center w-[280px]">
+              <div class="w-10 h-10 rounded-full bg-academic-accent text-white text-lg font-bold flex items-center justify-center mb-3 font-mono">5</div>
+              <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-5 w-full">
+                <h3 class="text-lg font-semibold text-academic-accent mb-2">状态机与安全</h3>
+                <p class="text-sm text-academic-secondary mb-3">Fail-safe 设计</p>
+                <ul class="text-sm text-academic-secondary space-y-1.5">
+                  <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>状态机设计</li>
+                  <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>多层次保护</li>
+                  <li class="flex items-start gap-2"><span class="text-academic-accent font-mono">·</span>报警系统</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Statistics -->
+        <div class="flex justify-center gap-16 mt-10 pt-6 border-t border-academic-border">
+          <div class="text-center">
+            <p class="text-[24px] font-bold text-academic-text font-mono">5</p>
+            <p class="text-[12px] text-academic-secondary mt-1">学习阶段</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[24px] font-bold text-academic-text font-mono">12</p>
+            <p class="text-[12px] text-academic-secondary mt-1">核心模块</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[24px] font-bold text-academic-text font-mono">4</p>
+            <p class="text-[12px] text-academic-secondary mt-1">分层架构</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[24px] font-bold text-academic-accent font-mono">PID</p>
+            <p class="text-[12px] text-academic-secondary mt-1">闭环控制</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Export Module -->
+  <script type="module">
+    import { toPng, toSvg } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm';
+
+    async function exportBlock(id, format = 'png') {
+      const node = document.getElementById(id);
+      if (!node) return;
+
+      // 保存原始 margin
+      const originalMargin = node.style.margin;
+      // 临时移除 margin，确保导出时内容居中
+      node.style.margin = '0';
+
+      const options = {
+        pixelRatio: 2,
+        backgroundColor: '#FAF7F0',
+        filter: (n) => !n.classList?.contains('block-toolbar'),
+        skipFonts: true
+      };
+
+      try {
+        const dataUrl = format === 'svg' ? await toSvg(node, options) : await toPng(node, options);
+        const link = document.createElement('a');
+        link.download = `${id}.${format}`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) { console.error('Export failed:', e); }
+      finally {
+        // 恢复原始 margin
+        node.style.margin = originalMargin;
+      }
+    }
+
+    async function copyBlockHtml(id) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      await navigator.clipboard.writeText(node.outerHTML);
+    }
+
+    document.querySelectorAll('[data-export-block]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlock, 'png'));
+    });
+    document.querySelectorAll('[data-export-block-svg]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlockSvg, 'svg'));
+    });
+    document.querySelectorAll('[data-copy-block]').forEach(btn => {
+      btn.addEventListener('click', () => copyBlockHtml(btn.dataset.copyBlock));
+    });
+  </script>
+
+</body>
+</html>

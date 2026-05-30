@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fail-safe 安全架构 - ESP32 BLDC 电机控制</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.font.im/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'academic-bg': '#FAF7F0',
+            'academic-text': '#1F2933',
+            'academic-secondary': '#475569',
+            'academic-border': '#CBD5E1',
+            'academic-accent': '#1E40AF',
+          },
+          fontFamily: {
+            'serif': ['IBM Plex Serif', 'Noto Serif SC', 'Source Han Serif SC', 'serif'],
+            'mono': ['IBM Plex Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .block-wrapper { position: relative; }
+    .block-toolbar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .block-wrapper:hover .block-toolbar { opacity: 1; }
+    .export-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .export-btn:hover {
+      background: #EFF6FF;
+      border-color: #1E40AF;
+      color: #1E40AF;
+    }
+  </style>
+</head>
+<body class="bg-academic-bg font-serif antialiased">
+
+  <!-- Block Wrapper -->
+  <div class="block-wrapper">
+
+    <!-- Export Toolbar -->
+    <div class="block-toolbar">
+      <button class="export-btn" data-export-block="block-007">PNG</button>
+      <button class="export-btn" data-export-block-svg="block-007">SVG</button>
+      <button class="export-btn" data-copy-block="block-007">Copy</button>
+    </div>
+
+    <!-- Visual Block: Large (1600×900) -->
+    <div id="block-007" class="visual-block relative bg-[#FAF7F0]" data-export="block" data-size="large" style="width: 1600px; height: 900px; margin: 0 auto; overflow: hidden;">
+
+      <div class="relative z-10 flex flex-col px-[80px] py-[50px] h-full">
+
+      <!-- Title -->
+      <div class="mb-8">
+        <h1 class="text-[42px] font-semibold text-academic-text mb-3 leading-tight">Fail-safe 多层次安全架构</h1>
+        <p class="text-[20px] text-academic-secondary">四层独立防护 + 多维度检测，任何单一故障不会导致整体失效</p>
+      </div>
+
+      <!-- Content -->
+      <div class="flex flex-col justify-center flex-1">
+
+        <!-- Four Protection Layers -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+
+          <!-- L1: Hardware -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded bg-[#E5F1FF] flex items-center justify-center">
+                <span class="text-academic-accent font-bold font-mono text-xs">L1</span>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-academic-text">硬件层</h3>
+                <p class="text-xs text-academic-secondary">物理级保护</p>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">继电器可控电源</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">GPIO 默认低电平</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">上电安全状态</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- L2: Communication -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded bg-[#E5F1FF] flex items-center justify-center">
+                <span class="text-academic-accent font-bold font-mono text-xs">L2</span>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-academic-text">通信层</h3>
+                <p class="text-xs text-academic-secondary">连接级保护</p>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">WS 断开 → 停机</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">命令超时 10s → 停机</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">WiFi 断开 → 停机</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- L3: State Machine -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded bg-[#E5F1FF] flex items-center justify-center">
+                <span class="text-academic-accent font-bold font-mono text-xs">L3</span>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-academic-text">状态机层</h3>
+                <p class="text-xs text-academic-secondary">逻辑级保护</p>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">未校准禁止控制</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">状态转换有条件</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-text">ERROR 态自动停机</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- L4: Protection (Highlighted) -->
+          <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded bg-academic-accent flex items-center justify-center">
+                <span class="text-white font-bold font-mono text-xs">L4</span>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-academic-accent">保护层</h3>
+                <p class="text-xs text-academic-secondary">运行级保护</p>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="bg-white border border-academic-accent rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-accent">过流保护 >5A</p>
+              </div>
+              <div class="bg-white border border-academic-accent rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-accent">过温保护 >80°C</p>
+              </div>
+              <div class="bg-white border border-academic-accent rounded px-2 py-1">
+                <p class="text-xs font-mono text-academic-accent">堵转保护 RPM<100</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Section -->
+        <div class="grid grid-cols-3 gap-6">
+
+          <!-- Alarm System -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-text mb-3">报警检测系统</h4>
+            <div class="space-y-2.5">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-[#F44336]"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-mono text-academic-text">ALARM_OVERCURRENT</p>
+                  <p class="text-xs text-academic-secondary">电流 >5A</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-[#FF9800]"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-mono text-academic-text">ALARM_OVERTEMP</p>
+                  <p class="text-xs text-academic-secondary">温度 >80°C</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-[#FFC107]"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-mono text-academic-text">ALARM_STALL</p>
+                  <p class="text-xs text-academic-secondary">堵转持续 3s</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-[#9C27B0]"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-mono text-academic-text">ALARM_COMM_LOST</p>
+                  <p class="text-xs text-academic-secondary">WS 断开/超时</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fail-safe Principles -->
+          <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-accent mb-3">Fail-safe 五大原则</h4>
+            <div class="space-y-2">
+              <div class="flex items-start gap-2">
+                <div class="w-5 h-5 rounded-full bg-academic-accent text-white text-xs font-bold flex items-center justify-center font-mono shrink-0">1</div>
+                <p class="text-sm text-academic-secondary">默认安全状态</p>
+              </div>
+              <div class="flex items-start gap-2">
+                <div class="w-5 h-5 rounded-full bg-academic-accent text-white text-xs font-bold flex items-center justify-center font-mono shrink-0">2</div>
+                <p class="text-sm text-academic-secondary">故障导向安全</p>
+              </div>
+              <div class="flex items-start gap-2">
+                <div class="w-5 h-5 rounded-full bg-academic-accent text-white text-xs font-bold flex items-center justify-center font-mono shrink-0">3</div>
+                <p class="text-sm text-academic-secondary">独立检测</p>
+              </div>
+              <div class="flex items-start gap-2">
+                <div class="w-5 h-5 rounded-full bg-academic-accent text-white text-xs font-bold flex items-center justify-center font-mono shrink-0">4</div>
+                <p class="text-sm text-academic-secondary">冗余保护</p>
+              </div>
+              <div class="flex items-start gap-2">
+                <div class="w-5 h-5 rounded-full bg-academic-accent text-white text-xs font-bold flex items-center justify-center font-mono shrink-0">5</div>
+                <p class="text-sm text-academic-secondary">快速响应</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emergency Stop Sequence -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-text mb-3">紧急停机序列</h4>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <div class="w-5 h-5 rounded bg-[#F44336] flex items-center justify-center">
+                  <span class="text-white text-xs font-bold font-mono">!</span>
+                </div>
+                <div class="flex-1 bg-[#FFEBEE] border border-[#F44336] rounded px-2 py-1">
+                  <p class="text-sm font-mono text-[#C62828]">alarm_trigger()</p>
+                </div>
+              </div>
+              <div class="flex justify-center">
+                <svg width="10" height="12" viewBox="0 0 10 12">
+                  <path d="M5 0 L5 8 M2 5 L5 8 L8 5" stroke="#475569" stroke-width="1.5" fill="none"/>
+                </svg>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-sm font-mono text-academic-text">esc_stop()</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-sm font-mono text-academic-text">relay_off()</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <p class="text-sm font-mono text-academic-text">pid_reset()</p>
+              </div>
+              <div class="bg-[#EFF6FF] border border-academic-accent rounded px-2 py-1">
+                <p class="text-sm font-mono text-academic-accent font-medium">STATE_ERROR</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Summary -->
+        <div class="flex justify-center gap-12 mt-6 pt-5 border-t border-academic-border">
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-academic-accent"></div>
+            <span class="text-sm text-academic-secondary">四层独立防护</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-[#F44336]"></div>
+            <span class="text-sm text-academic-secondary">四类报警检测</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-[#FFC107]"></div>
+            <span class="text-sm text-academic-secondary">堵转延时触发避免误报</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-[#9C27B0]"></div>
+            <span class="text-sm text-academic-secondary">通信断开立即停机</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Export Module -->
+  <script type="module">
+    import { toPng, toSvg } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm';
+
+    async function exportBlock(id, format = 'png') {
+      const node = document.getElementById(id);
+      if (!node) return;
+
+      // 保存原始 margin
+      const originalMargin = node.style.margin;
+      // 临时移除 margin，确保导出时内容居中
+      node.style.margin = '0';
+
+      const options = {
+        pixelRatio: 2,
+        backgroundColor: '#FAF7F0',
+        filter: (n) => !n.classList?.contains('block-toolbar'),
+        skipFonts: true
+      };
+
+      try {
+        const dataUrl = format === 'svg' ? await toSvg(node, options) : await toPng(node, options);
+        const link = document.createElement('a');
+        link.download = `${id}.${format}`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) { console.error('Export failed:', e); }
+      finally {
+        // 恢复原始 margin
+        node.style.margin = originalMargin;
+      }
+    }
+
+    async function copyBlockHtml(id) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      await navigator.clipboard.writeText(node.outerHTML);
+    }
+
+    document.querySelectorAll('[data-export-block]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlock, 'png'));
+    });
+    document.querySelectorAll('[data-export-block-svg]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlockSvg, 'svg'));
+    });
+    document.querySelectorAll('[data-copy-block]').forEach(btn => {
+      btn.addEventListener('click', () => copyBlockHtml(btn.dataset.copyBlock));
+    });
+  </script>
+
+</body>
+</html>

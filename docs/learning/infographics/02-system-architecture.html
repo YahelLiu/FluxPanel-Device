@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统架构图 - ESP32 BLDC 电机控制</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.font.im/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'academic-bg': '#FAF7F0',
+            'academic-text': '#1F2933',
+            'academic-secondary': '#475569',
+            'academic-border': '#CBD5E1',
+            'academic-accent': '#1E40AF',
+          },
+          fontFamily: {
+            'serif': ['IBM Plex Serif', 'Noto Serif SC', 'Source Han Serif SC', 'serif'],
+            'mono': ['IBM Plex Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .block-wrapper { position: relative; }
+    .block-toolbar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .block-wrapper:hover .block-toolbar { opacity: 1; }
+    .export-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .export-btn:hover {
+      background: #EFF6FF;
+      border-color: #1E40AF;
+      color: #1E40AF;
+    }
+  </style>
+</head>
+<body class="bg-academic-bg font-serif antialiased">
+
+  <!-- Block Wrapper -->
+  <div class="block-wrapper">
+
+    <!-- Export Toolbar -->
+    <div class="block-toolbar">
+      <button class="export-btn" data-export-block="block-002">PNG</button>
+      <button class="export-btn" data-export-block-svg="block-002">SVG</button>
+      <button class="export-btn" data-copy-block="block-002">Copy</button>
+    </div>
+
+    <!-- Visual Block: Large (1600×900) -->
+    <div id="block-002" class="visual-block relative bg-[#FAF7F0]" data-export="block" data-size="large" style="width: 1600px; height: 900px; margin: 0 auto; overflow: hidden;">
+
+      <div class="relative z-10 flex flex-col px-[80px] py-[50px] h-full">
+
+      <!-- Title -->
+      <div class="mb-8">
+        <h1 class="text-[42px] font-semibold text-academic-text mb-3 leading-tight">ESP32 BLDC 电机控制系统架构</h1>
+        <p class="text-[20px] text-academic-secondary">四层模块化设计，从通信到感知的完整闭环</p>
+      </div>
+
+      <!-- Architecture Content -->
+      <div class="flex flex-col justify-center flex-1">
+
+        <!-- Core Config -->
+        <div class="flex justify-center mb-6">
+          <div class="bg-white border-2 border-academic-accent rounded-lg px-10 py-3">
+            <p class="text-sm text-academic-secondary mb-1">核心配置</p>
+            <div class="flex gap-8">
+              <span class="text-base font-semibold text-academic-accent font-mono">config.h</span>
+              <span class="text-base font-semibold text-academic-text font-mono">motor_state.h</span>
+              <span class="text-base font-semibold text-academic-text font-mono">main.cpp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Arrow Down -->
+        <div class="flex justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24">
+            <path d="M12 0 L12 16 M6 10 L12 16 L18 10" stroke="#CBD5E1" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+
+        <!-- Four Layers -->
+        <div class="grid grid-cols-4 gap-5">
+
+          <!-- Layer 1: Communication -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 rounded bg-[#E5F1FF] flex items-center justify-center">
+                <span class="text-academic-accent font-bold font-mono text-sm">L1</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-academic-text">通信层</h3>
+                <p class="text-xs text-academic-secondary">网络连接与协议</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-text">wifi_manager.*</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-text">websocket.*</p>
+              </div>
+            </div>
+            <p class="text-xs text-academic-secondary mt-3 italic">单向依赖，不感知业务</p>
+          </div>
+
+          <!-- Layer 2: Control (Highlighted) -->
+          <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 rounded bg-academic-accent flex items-center justify-center">
+                <span class="text-white font-bold font-mono text-sm">L2</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-academic-accent">控制层</h3>
+                <p class="text-xs text-academic-secondary">电机控制决策</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="bg-white border border-academic-accent rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-accent">motor_fsm.*</p>
+              </div>
+              <div class="bg-white border border-academic-accent rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-accent">esc_pwm.*</p>
+              </div>
+              <div class="bg-white border border-academic-accent rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-accent">pid_controller.*</p>
+              </div>
+              <div class="bg-white border border-academic-accent rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-accent">relay.*</p>
+              </div>
+            </div>
+            <p class="text-xs text-academic-accent mt-3 font-medium">核心逻辑，高优先级</p>
+          </div>
+
+          <!-- Layer 3: Sensing -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 rounded bg-[#E5F1FF] flex items-center justify-center">
+                <span class="text-academic-accent font-bold font-mono text-sm">L3</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-academic-text">感知层</h3>
+                <p class="text-xs text-academic-secondary">数据采集与检测</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-text">hall_sensor.*</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-text">ina219_sensor.*</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-text">alarm.*</p>
+              </div>
+            </div>
+            <p class="text-xs text-academic-secondary mt-3 italic">被动响应，提供数据</p>
+          </div>
+
+          <!-- Layer 4: Display -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 rounded bg-[#E5F1FF] flex items-center justify-center">
+                <span class="text-academic-accent font-bold font-mono text-sm">L4</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-academic-text">显示层</h3>
+                <p class="text-xs text-academic-secondary">人机交互界面</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-3 py-1.5">
+                <p class="text-sm font-mono text-academic-text">display.*</p>
+              </div>
+              <div class="bg-[#FAFAFA] border border-academic-border rounded px-3 py-1.5">
+                <p class="text-sm text-academic-secondary italic">ST7735 LCD</p>
+              </div>
+            </div>
+            <p class="text-xs text-academic-secondary mt-3 italic">低优先级，不影响控制</p>
+          </div>
+
+        </div>
+
+        <!-- Dependency Direction -->
+        <div class="flex justify-center mt-6">
+          <div class="flex items-center gap-6 text-sm text-academic-secondary">
+            <div class="flex items-center gap-2">
+              <svg width="24" height="8" viewBox="0 0 24 8">
+                <path d="M0 4 L20 4 M16 0 L24 4 L16 8" stroke="#475569" stroke-width="1.5"/>
+              </svg>
+              <span>高层依赖低层</span>
+            </div>
+            <div class="w-px h-4 bg-academic-border"></div>
+            <div class="flex items-center gap-2">
+              <span class="text-academic-accent font-medium">控制层</span>
+              <span>为核心逻辑层</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Summary -->
+        <div class="flex justify-center gap-12 mt-6 pt-6 border-t border-academic-border">
+          <div class="text-center">
+            <p class="text-[20px] font-bold text-academic-text font-mono">4</p>
+            <p class="text-[12px] text-academic-secondary mt-1">分层架构</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[20px] font-bold text-academic-text font-mono">12</p>
+            <p class="text-[12px] text-academic-secondary mt-1">功能模块</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[20px] font-bold text-academic-accent font-mono">单向</p>
+            <p class="text-[12px] text-academic-secondary mt-1">依赖方向</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[20px] font-bold text-academic-text font-mono">可测试</p>
+            <p class="text-[12px] text-academic-secondary mt-1">模块独立</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Export Module -->
+  <script type="module">
+    import { domToPng, domToSvg } from 'https://cdn.jsdelivr.net/npm/modern-screenshot@4.4.0/+esm';
+
+    async function exportBlock(id, format = 'png') {
+      const node = document.getElementById(id);
+      if (!node) return;
+
+      // 等待所有字体加载完成
+      await document.fonts.ready;
+
+      // 保存原始 margin
+      const originalMargin = node.style.margin;
+      // 临时移除 margin，确保导出时内容居中
+      node.style.margin = '0';
+
+      try {
+        const dataUrl = format === 'svg'
+          ? await domToSvg(node, { scale: 2, backgroundColor: '#FAF7F0' })
+          : await domToPng(node, { scale: 2, backgroundColor: '#FAF7F0' });
+
+        const link = document.createElement('a');
+        link.download = `${id}.${format}`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) { console.error('Export failed:', e); }
+      finally {
+        // 恢复原始 margin
+        node.style.margin = originalMargin;
+      }
+    }
+
+    async function copyBlockHtml(id) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      await navigator.clipboard.writeText(node.outerHTML);
+    }
+
+    document.querySelectorAll('[data-export-block]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlock, 'png'));
+    });
+    document.querySelectorAll('[data-export-block-svg]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlockSvg, 'svg'));
+    });
+    document.querySelectorAll('[data-copy-block]').forEach(btn => {
+      btn.addEventListener('click', () => copyBlockHtml(btn.dataset.copyBlock));
+    });
+  </script>
+
+</body>
+</html>

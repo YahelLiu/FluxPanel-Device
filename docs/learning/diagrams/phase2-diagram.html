@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阶段二：通信与控制 - 可视化学习</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #11998e, #38ef7d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { text-align: center; color: #888; margin-bottom: 40px; }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .section h2 { color: #38ef7d; margin-bottom: 20px; font-size: 1.5em; }
+
+        /* WiFi 配网流程 */
+        .wifi-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .flow-node {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 200px;
+        }
+        .flow-node.decision {
+            background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+            transform: rotate(0deg);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            padding: 30px 50px;
+        }
+        .flow-node.success { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .flow-node.ap-mode { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .flow-arrow { color: #555; font-size: 1.5em; }
+        .flow-label { color: #888; font-size: 0.8em; margin-left: 10px; }
+
+        /* WebSocket 架构 */
+        .ws-architecture {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .ws-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            min-width: 200px;
+        }
+        .ws-box.server {
+            border: 2px solid #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+        .ws-box.esp32 {
+            border: 2px solid #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+        .ws-box.motor {
+            border: 2px solid #f39c12;
+            background: rgba(243, 156, 18, 0.1);
+        }
+        .ws-connection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #38ef7d;
+        }
+        .ws-connection .arrow { font-size: 2em; }
+        .ws-connection small { color: #888; }
+
+        /* JSON 协议 */
+        .json-protocol {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .json-card {
+            background: #1e1e1e;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .json-header {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            padding: 10px 15px;
+            font-weight: bold;
+        }
+        .json-body {
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-number { color: #b5cea8; }
+        .json-bool { color: #569cd6; }
+
+        /* PWM 信号图 */
+        .pwm-diagram {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .pwm-wave {
+            position: relative;
+            height: 150px;
+            margin: 20px 0;
+        }
+        .pwm-signal {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            height: 80px;
+        }
+        .pwm-pulse {
+            position: absolute;
+            bottom: 0;
+            height: 60px;
+            background: linear-gradient(180deg, #38ef7d, #11998e);
+        }
+        .pwm-label {
+            position: absolute;
+            bottom: 0;
+            font-size: 0.8em;
+            color: #888;
+        }
+        .pwm-scale {
+            position: absolute;
+            top: 0;
+            color: #888;
+            font-size: 0.75em;
+        }
+
+        /* 脉宽映射 */
+        .pulse-mapping {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .pulse-item {
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+        }
+        .pulse-value { font-size: 1.5em; color: #38ef7d; font-weight: bold; }
+        .pulse-label { color: #888; font-size: 0.9em; }
+        .pulse-bar {
+            height: 10px;
+            background: linear-gradient(90deg, #27ae60, #38ef7d);
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        /* 回调机制 */
+        .callback-flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .callback-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            min-width: 180px;
+        }
+        .callback-box.ws { border: 2px solid #11998e; }
+        .callback-box.main { border: 2px solid #f39c12; }
+        .callback-arrow {
+            color: #38ef7d;
+            font-size: 1.5em;
+        }
+        .callback-code {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.8em;
+            margin-top: 10px;
+            color: #9cdcfe;
+        }
+
+        /* 心跳机制 */
+        .heartbeat-timeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        .hb-event {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+        }
+        .hb-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+        .hb-dot.ping { background: #3498db; }
+        .hb-dot.pong { background: #2ecc71; }
+        .hb-dot.data { background: #f39c12; }
+        .hb-line {
+            flex: 1;
+            height: 2px;
+            background: #333;
+            min-width: 30px;
+        }
+        .hb-label { font-size: 0.8em; color: #888; }
+        .hb-time { font-size: 0.7em; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>阶段二：通信与控制</h1>
+        <p class="subtitle">WebSocket 与 PWM | 可视化学习</p>
+
+        <!-- WiFi 配网流程 -->
+        <div class="section">
+            <h2>📶 WiFiManager 配网流程</h2>
+            <div class="wifi-flow">
+                <div class="flow-node">ESP32 启动</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node decision">检查保存的 WiFi 配置</div>
+                <div class="flow-arrow">↓</div>
+                <div style="display:flex;gap:50px;align-items:flex-start;">
+                    <div class="wifi-flow">
+                        <div class="flow-label">有配置</div>
+                        <div class="flow-node">尝试连接</div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-node success">连接成功 ✓</div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-node success">正常模式</div>
+                    </div>
+                    <div class="wifi-flow">
+                        <div class="flow-label">无配置</div>
+                        <div class="flow-node ap-mode">开启 AP 热点</div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-node ap-mode">192.168.4.1</div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-node">手机配网</div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-node success">保存并连接</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WebSocket 架构 -->
+        <div class="section">
+            <h2>🔌 WebSocket 通信架构</h2>
+            <div class="ws-architecture">
+                <div class="ws-box server">
+                    <h3>🖥️ 后端服务器</h3>
+                    <p>139.196.84.99:8080</p>
+                    <small>FluxPanel 后端</small>
+                </div>
+
+                <div class="ws-connection">
+                    <small>WebSocket (JSON)</small>
+                    <div class="arrow">⟷</div>
+                    <small>双向实时通信</small>
+                </div>
+
+                <div class="ws-box esp32">
+                    <h3>⚡ ESP32-C3</h3>
+                    <p>命令解析 → 状态上报</p>
+                    <small>WebSocket 客户端</small>
+                </div>
+
+                <div class="ws-connection">
+                    <small>PWM 信号</small>
+                    <div class="arrow">→</div>
+                    <small>50Hz</small>
+                </div>
+
+                <div class="ws-box motor">
+                    <h3>🔧 BLDC 电机</h3>
+                    <p>ESC 电子调速器</p>
+                    <small>1000-2000µs 脉宽</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- JSON 协议 -->
+        <div class="section">
+            <h2>📋 JSON 协议格式</h2>
+            <div class="json-protocol">
+                <div class="json-card">
+                    <div class="json-header">📥 命令消息 (Server → ESP32)</div>
+                    <div class="json-body">
+{<br>
+&nbsp;&nbsp;<span class="json-key">"type"</span>: <span class="json-string">"command"</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"command_id"</span>: <span class="json-number">12345</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"command"</span>: <span class="json-string">"start"</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"params"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"speed_percent"</span>: <span class="json-number">50</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"direction"</span>: <span class="json-number">1</span><br>
+&nbsp;&nbsp;}<br>
+}
+                    </div>
+                </div>
+
+                <div class="json-card">
+                    <div class="json-header">📤 状态上报 (ESP32 → Server)</div>
+                    <div class="json-body">
+{<br>
+&nbsp;&nbsp;<span class="json-key">"type"</span>: <span class="json-string">"status"</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"device_id"</span>: <span class="json-string">"ESP32_Yves"</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"data"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"is_running"</span>: <span class="json-bool">true</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"speed_percent"</span>: <span class="json-number">50</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"current"</span>: <span class="json-number">1.25</span><br>
+&nbsp;&nbsp;}<br>
+}
+                    </div>
+                </div>
+
+                <div class="json-card">
+                    <div class="json-header">✅ 命令确认 (ESP32 → Server)</div>
+                    <div class="json-body">
+{<br>
+&nbsp;&nbsp;<span class="json-key">"type"</span>: <span class="json-string">"command_ack"</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"command_id"</span>: <span class="json-number">12345</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"success"</span>: <span class="json-bool">true</span>,<br>
+&nbsp;&nbsp;<span class="json-key">"message"</span>: <span class="json-string">"Motor started"</span><br>
+}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PWM 信号 -->
+        <div class="section">
+            <h2>📊 ESC PWM 信号原理</h2>
+
+            <div class="pwm-diagram">
+                <div class="pwm-scale" style="left:5%;">0ms</div>
+                <div class="pwm-scale" style="left:25%;">5ms</div>
+                <div class="pwm-scale" style="left:50%;">10ms</div>
+                <div class="pwm-scale" style="left:75%;">15ms</div>
+                <div class="pwm-scale" style="right:5%;">20ms</div>
+
+                <div class="pwm-wave">
+                    <!-- 0% 转速 -->
+                    <div class="pwm-pulse" style="left:0; width:5%;"></div>
+                    <div class="pwm-pulse" style="left:25%; width:5%;"></div>
+                    <div class="pwm-pulse" style="left:50%; width:5%;"></div>
+                    <div class="pwm-pulse" style="left:75%; width:5%;"></div>
+
+                    <div class="pwm-label" style="left:2.5%;">1000µs</div>
+                    <div class="pwm-label" style="left:52%;">停止</div>
+                </div>
+
+                <div class="pwm-wave" style="margin-top:40px;">
+                    <!-- 50% 转速 -->
+                    <div class="pwm-pulse" style="left:0; width:7.5%; background: linear-gradient(180deg, #f39c12, #e74c3c);"></div>
+                    <div class="pwm-pulse" style="left:25%; width:7.5%; background: linear-gradient(180deg, #f39c12, #e74c3c);"></div>
+                    <div class="pwm-pulse" style="left:50%; width:7.5%; background: linear-gradient(180deg, #f39c12, #e74c3c);"></div>
+                    <div class="pwm-pulse" style="left:75%; width:7.5%; background: linear-gradient(180deg, #f39c12, #e74c3c);"></div>
+
+                    <div class="pwm-label" style="left:3%;">1500µs</div>
+                    <div class="pwm-label" style="left:52%;">中速</div>
+                </div>
+
+                <div class="pwm-wave" style="margin-top:40px;">
+                    <!-- 100% 转速 -->
+                    <div class="pwm-pulse" style="left:0; width:10%; background: linear-gradient(180deg, #e74c3c, #c0392b);"></div>
+                    <div class="pwm-pulse" style="left:25%; width:10%; background: linear-gradient(180deg, #e74c3c, #c0392b);"></div>
+                    <div class="pwm-pulse" style="left:50%; width:10%; background: linear-gradient(180deg, #e74c3c, #c0392b);"></div>
+                    <div class="pwm-pulse" style="left:75%; width:10%; background: linear-gradient(180deg, #e74c3c, #c0392b);"></div>
+
+                    <div class="pwm-label" style="left:4%;">2000µs</div>
+                    <div class="pwm-label" style="left:52%;">全速</div>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin:20px 0;">
+                周期 = 20ms (50Hz) | 脉宽 = 1000~2000µs
+            </p>
+
+            <div class="pulse-mapping">
+                <div class="pulse-item">
+                    <div class="pulse-value">0%</div>
+                    <div class="pulse-label">转速</div>
+                    <div class="pulse-bar" style="width:0;"></div>
+                    <small>1000µs</small>
+                </div>
+                <div class="pulse-item">
+                    <div class="pulse-value">25%</div>
+                    <div class="pulse-label">转速</div>
+                    <div class="pulse-bar" style="width:25%;"></div>
+                    <small>1250µs</small>
+                </div>
+                <div class="pulse-item">
+                    <div class="pulse-value">50%</div>
+                    <div class="pulse-label">转速</div>
+                    <div class="pulse-bar" style="width:50%;"></div>
+                    <small>1500µs</small>
+                </div>
+                <div class="pulse-item">
+                    <div class="pulse-value">75%</div>
+                    <div class="pulse-label">转速</div>
+                    <div class="pulse-bar" style="width:75%;"></div>
+                    <small>1750µs</small>
+                </div>
+                <div class="pulse-item">
+                    <div class="pulse-value">100%</div>
+                    <div class="pulse-label">转速</div>
+                    <div class="pulse-bar" style="width:100%;"></div>
+                    <small>2000µs</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 回调机制 -->
+        <div class="section">
+            <h2>🔄 回调机制 (解耦设计)</h2>
+            <div class="callback-flow">
+                <div class="callback-box ws">
+                    <h4>websocket.cpp</h4>
+                    <small>通信层</small>
+                    <div class="callback-code">
+                        收到 JSON<br>
+                        ↓<br>
+                        解析命令
+                    </div>
+                </div>
+
+                <div class="callback-arrow">
+                    commandCallback(cmd)<br>
+                    <small>调用回调</small>
+                </div>
+
+                <div class="callback-box main">
+                    <h4>main.cpp</h4>
+                    <small>业务层</small>
+                    <div class="callback-code">
+                        onCommandReceived()<br>
+                        ↓<br>
+                        执行命令逻辑<br>
+                        ↓<br>
+                        发送 ACK
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin-top:20px;">
+                💡 <strong>解耦优势</strong>：通信层不感知业务逻辑，可独立测试和复用
+            </p>
+        </div>
+
+        <!-- 心跳机制 -->
+        <div class="section">
+            <h2>💓 心跳保活机制</h2>
+            <div class="heartbeat-timeline">
+                <div class="hb-event">
+                    <div class="hb-dot ping"></div>
+                    <div class="hb-label">PING</div>
+                    <div class="hb-time">0s</div>
+                </div>
+                <div class="hb-line"></div>
+                <div class="hb-event">
+                    <div class="hb-dot pong"></div>
+                    <div class="hb-label">PONG</div>
+                    <div class="hb-time">~100ms</div>
+                </div>
+                <div class="hb-line"></div>
+                <div class="hb-event">
+                    <div class="hb-dot data"></div>
+                    <div class="hb-label">状态</div>
+                    <div class="hb-time">1s</div>
+                </div>
+                <div class="hb-line"></div>
+                <div class="hb-event">
+                    <div class="hb-dot data"></div>
+                    <div class="hb-label">状态</div>
+                    <div class="hb-time">2s</div>
+                </div>
+                <div class="hb-line"></div>
+                <div class="hb-event">
+                    <div class="hb-dot ping"></div>
+                    <div class="hb-label">PING</div>
+                    <div class="hb-time">30s</div>
+                </div>
+                <div class="hb-line"></div>
+                <div class="hb-event">
+                    <div class="hb-dot pong"></div>
+                    <div class="hb-label">PONG</div>
+                    <div class="hb-time">~30.1s</div>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin-top:15px;">
+                心跳间隔: 30秒 | 状态上报: 1秒 | 超时停机: 10秒无命令
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阶段三：RTOS 多任务 - 可视化学习</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #f39c12, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { text-align: center; color: #888; margin-bottom: 40px; }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .section h2 { color: #f39c12; margin-bottom: 20px; font-size: 1.5em; }
+
+        /* 任务优先级图 */
+        .task-priority {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .task-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .task-prio {
+            width: 80px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .task-prio.p3 { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .task-prio.p2 { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .task-prio.p1 { background: linear-gradient(135deg, #3498db, #2980b9); }
+
+        .task-bar {
+            flex: 1;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: relative;
+        }
+        .task-bar.motor { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .task-bar.wifi { background: linear-gradient(90deg, #f39c12, #e67e22); }
+        .task-bar.sensor { background: linear-gradient(90deg, #3498db, #2980b9); }
+        .task-bar.display { background: linear-gradient(90deg, #9b59b6, #8e44ad); }
+
+        .task-info { flex: 1; }
+        .task-name { font-weight: bold; font-size: 1.1em; }
+        .task-detail { font-size: 0.85em; opacity: 0.8; }
+
+        .task-cycle {
+            background: rgba(0,0,0,0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        /* 时序对比图 */
+        .timing-diagram {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .timing-row {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+        }
+        .timing-label {
+            width: 120px;
+            color: #888;
+            font-size: 0.9em;
+        }
+        .timing-timeline {
+            flex: 1;
+            height: 30px;
+            background: #2a2a4e;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        .timing-block {
+            position: absolute;
+            height: 100%;
+            border-radius: 3px;
+        }
+        .timing-block.exec { background: #27ae60; }
+        .timing-block.delay { background: #3498db; opacity: 0.5; }
+        .timing-block.error { background: #e74c3c; }
+
+        .timing-scale {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            color: #555;
+            font-size: 0.75em;
+        }
+
+        /* vTaskDelay 对比 */
+        .delay-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .delay-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .delay-card.wrong { border: 2px solid #e74c3c; }
+        .delay-card.right { border: 2px solid #27ae60; }
+        .delay-card h3 { margin-bottom: 15px; }
+        .delay-card.wrong h3 { color: #e74c3c; }
+        .delay-card.right h3 { color: #27ae60; }
+
+        .delay-timeline {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .delay-event {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+        .delay-event.exec { background: #27ae60; }
+        .delay-event.sleep { background: #3498db; }
+        .delay-event.drift { background: #e74c3c; }
+
+        /* 互斥锁图 */
+        .mutex-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .mutex-scenario {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+        .mutex-task {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .mutex-task.motor { border-left: 4px solid #e74c3c; }
+        .mutex-task.sensor { border-left: 4px solid #3498db; }
+
+        .mutex-resource {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            padding: 30px;
+            border-radius: 50%;
+            text-align: center;
+        }
+
+        .mutex-arrow {
+            color: #888;
+            font-size: 1.5em;
+        }
+        .mutex-arrow.locked { color: #f39c12; }
+
+        /* 调度器可视化 */
+        .scheduler {
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .scheduler h3 { color: #888; margin-bottom: 15px; }
+        .scheduler-timeline {
+            display: flex;
+            height: 60px;
+            background: #2a2a4e;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .scheduler-slice {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .scheduler-slice.motor { background: #e74c3c; }
+        .scheduler-slice.wifi { background: #f39c12; }
+        .scheduler-slice.sensor { background: #3498db; }
+        .scheduler-slice.idle { background: #555; }
+
+        .scheduler-labels {
+            display: flex;
+            margin-top: 10px;
+            justify-content: space-between;
+            color: #555;
+            font-size: 0.75em;
+        }
+
+        /* 通信机制对比 */
+        .comm-compare {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .comm-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .comm-card.highlight { border: 2px solid #f39c12; }
+        .comm-icon { font-size: 2em; margin-bottom: 10px; }
+        .comm-name { font-weight: bold; margin-bottom: 5px; }
+        .comm-desc { font-size: 0.85em; color: #888; }
+        .comm-use {
+            margin-top: 10px;
+            font-size: 0.8em;
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>阶段三：RTOS 多任务</h1>
+        <p class="subtitle">FreeRTOS 实战 | 可视化学习</p>
+
+        <!-- 任务优先级 -->
+        <div class="section">
+            <h2>📊 任务优先级设计</h2>
+            <div class="task-priority">
+                <div class="task-row">
+                    <div class="task-prio p3">优先级 3</div>
+                    <div class="task-bar motor">
+                        <div class="task-info">
+                            <div class="task-name">🔴 MotorTask</div>
+                            <div class="task-detail">PID 控制、状态机更新、安全检查</div>
+                        </div>
+                        <div class="task-cycle">10ms</div>
+                    </div>
+                </div>
+
+                <div class="task-row">
+                    <div class="task-prio p2">优先级 2</div>
+                    <div class="task-bar wifi">
+                        <div class="task-info">
+                            <div class="task-name">🟡 WiFiTask</div>
+                            <div class="task-detail">WebSocket 通信、命令接收</div>
+                        </div>
+                        <div class="task-cycle">事件驱动</div>
+                    </div>
+                </div>
+
+                <div class="task-row">
+                    <div class="task-prio p1">优先级 1</div>
+                    <div class="task-bar sensor">
+                        <div class="task-info">
+                            <div class="task-name">🔵 SensorTask</div>
+                            <div class="task-detail">电流/电压/转速采样</div>
+                        </div>
+                        <div class="task-cycle">100ms</div>
+                    </div>
+                </div>
+
+                <div class="task-row">
+                    <div class="task-prio p1">优先级 1</div>
+                    <div class="task-bar display">
+                        <div class="task-info">
+                            <div class="task-name">🟣 DisplayTask</div>
+                            <div class="task-detail">LCD 界面刷新</div>
+                        </div>
+                        <div class="task-cycle">100ms</div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin-top:20px;">
+                💡 <strong>优先级原则</strong>：实时性要求高 + 执行时间短 = 高优先级
+            </p>
+        </div>
+
+        <!-- 调度器可视化 -->
+        <div class="section">
+            <h2>⚙️ 抢占式调度演示</h2>
+            <div class="scheduler">
+                <h3>100ms 时间轴内的任务调度</h3>
+                <div class="scheduler-timeline">
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice wifi" style="width:3%;">W</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice sensor" style="width:3%;">S</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice wifi" style="width:3%;">W</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice idle" style="width:3%;">.</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice wifi" style="width:3%;">W</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice idle" style="width:3%;">.</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice wifi" style="width:3%;">W</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice idle" style="width:3%;">.</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice wifi" style="width:3%;">W</div>
+                    <div class="scheduler-slice sensor" style="width:3%;">S</div>
+                    <div class="scheduler-slice display" style="width:3%;">D</div>
+                    <div class="scheduler-slice motor" style="width:5%;">M</div>
+                    <div class="scheduler-slice idle" style="width:14%;">idle...</div>
+                </div>
+                <div class="scheduler-labels">
+                    <span>0ms</span>
+                    <span>10ms</span>
+                    <span>20ms</span>
+                    <span>...</span>
+                    <span>100ms</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:20px;justify-content:center;margin-top:15px;flex-wrap:wrap;">
+                <span><span style="color:#e74c3c;">M</span> = Motor</span>
+                <span><span style="color:#f39c12;">W</span> = WiFi</span>
+                <span><span style="color:#3498db;">S</span> = Sensor</span>
+                <span><span style="color:#9b59b6;">D</span> = Display</span>
+                <span><span style="color:#555;">.</span> = Idle</span>
+            </div>
+        </div>
+
+        <!-- vTaskDelay 对比 -->
+        <div class="section">
+            <h2>⏱️ vTaskDelay vs vTaskDelayUntil</h2>
+            <div class="delay-compare">
+                <div class="delay-card wrong">
+                    <h3>❌ vTaskDelay(10)</h3>
+                    <p style="color:#888;">相对延迟，会累积漂移</p>
+                    <div class="delay-timeline">
+                        <div class="delay-event exec">执行 2ms</div>
+                        <div class="delay-event sleep">sleep 10ms</div>
+                        <div class="delay-event exec">执行 2ms</div>
+                        <div class="delay-event sleep">sleep 10ms</div>
+                        <div class="delay-event exec">执行 2ms</div>
+                        <div class="delay-event sleep">sleep 10ms</div>
+                        <div class="delay-event drift">漂移!</div>
+                    </div>
+                    <p style="margin-top:10px;font-size:0.85em;">
+                        实际周期 = 2ms + 10ms = <strong style="color:#e74c3c;">12ms</strong><br>
+                        累积误差越来越大！
+                    </p>
+                </div>
+
+                <div class="delay-card right">
+                    <h3>✅ vTaskDelayUntil(&time, 10)</h3>
+                    <p style="color:#888;">绝对周期，精确控制</p>
+                    <div class="delay-timeline">
+                        <div class="delay-event exec">执行 2ms</div>
+                        <div class="delay-event sleep">sleep 8ms</div>
+                        <div class="delay-event exec">执行 2ms</div>
+                        <div class="delay-event sleep">sleep 8ms</div>
+                        <div class="delay-event exec">执行 2ms</div>
+                        <div class="delay-event sleep">sleep 8ms</div>
+                        <div class="delay-event exec">精确!</div>
+                    </div>
+                    <p style="margin-top:10px;font-size:0.85em;">
+                        实际周期 = 恒定 <strong style="color:#27ae60;">10ms</strong><br>
+                        自动补齐执行时间
+                    </p>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin-top:20px;">
+                💡 <strong>PID 控制必须用 vTaskDelayUntil</strong>，因为 dt 必须精确
+            </p>
+        </div>
+
+        <!-- 互斥锁 -->
+        <div class="section">
+            <h2>🔒 互斥锁保护共享数据</h2>
+            <div class="mutex-diagram">
+                <div class="mutex-scenario">
+                    <div class="mutex-task motor">
+                        <strong>🔴 MotorTask</strong><br>
+                        <small>读取 motorState</small><br>
+                        <code style="font-size:0.8em;background:#333;padding:2px 5px;border-radius:3px;">
+                            xSemaphoreTake(mutex)
+                        </code>
+                    </div>
+
+                    <div class="mutex-arrow locked">🔒 锁定</div>
+
+                    <div class="mutex-resource">
+                        <strong>motorState</strong><br>
+                        <small>共享数据</small>
+                    </div>
+                </div>
+
+                <div style="text-align:center;color:#888;">↓ 等待中...</div>
+
+                <div class="mutex-scenario">
+                    <div class="mutex-task sensor">
+                        <strong>🔵 SensorTask</strong><br>
+                        <small>写入 motorState</small><br>
+                        <code style="font-size:0.8em;background:#333;padding:2px 5px;border-radius:3px;">
+                            xSemaphoreTake(mutex) → 等待
+                        </code>
+                    </div>
+
+                    <div class="mutex-arrow">⏳ 等待</div>
+
+                    <div class="mutex-resource" style="opacity:0.5;">
+                        <strong>motorState</strong><br>
+                        <small>被锁定</small>
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin-top:20px;">
+                💡 <strong>优先级继承</strong>：低优先级任务持有锁时，临时提升到等待者优先级
+            </p>
+        </div>
+
+        <!-- 通信机制对比 -->
+        <div class="section">
+            <h2>📡 任务间通信机制</h2>
+            <div class="comm-compare">
+                <div class="comm-card highlight">
+                    <div class="comm-icon">🔐</div>
+                    <div class="comm-name">互斥锁 Mutex</div>
+                    <div class="comm-desc">保护共享资源</div>
+                    <div class="comm-use">本项目使用 ✓</div>
+                </div>
+
+                <div class="comm-card">
+                    <div class="comm-icon">📮</div>
+                    <div class="comm-name">队列 Queue</div>
+                    <div class="comm-desc">数据传递</div>
+                    <div class="comm-use">有缓冲</div>
+                </div>
+
+                <div class="comm-card">
+                    <div class="comm-icon">🚦</div>
+                    <div class="comm-name">信号量 Semaphore</div>
+                    <div class="comm-desc">事件通知</div>
+                    <div class="comm-use">可计数</div>
+                </div>
+
+                <div class="comm-card">
+                    <div class="comm-icon">📋</div>
+                    <div class="comm-name">事件组 EventGroup</div>
+                    <div class="comm-desc">多事件同步</div>
+                    <div class="comm-use">位操作</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

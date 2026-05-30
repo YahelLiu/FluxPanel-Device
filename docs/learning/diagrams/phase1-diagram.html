@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阶段一：基础入门 - 可视化学习</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        /* 模块架构图 */
+        .architecture {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .architecture h2 {
+            color: #00d2ff;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        .layer {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .module {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 25px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .module:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+        }
+        .module.comm { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .module.control { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); }
+        .module.sense { background: linear-gradient(135deg, #6a3093 0%, #a044ff 100%); }
+        .module.display { background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%); }
+        .module.core { background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); }
+
+        .layer-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100px;
+            color: #888;
+            font-size: 0.9em;
+        }
+        .arrow-down {
+            text-align: center;
+            font-size: 2em;
+            color: #444;
+            margin: 10px 0;
+        }
+
+        /* 初始化流程图 */
+        .flowchart {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .flowchart h2 {
+            color: #00d2ff;
+            margin-bottom: 20px;
+        }
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        .step-num {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .step-content {
+            background: rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+            min-width: 300px;
+        }
+        .step-content code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #38ef7d;
+        }
+        .arrow {
+            color: #555;
+            font-size: 1.5em;
+        }
+        .dep-arrow {
+            color: #ff6a00;
+            font-size: 0.8em;
+        }
+
+        /* 宏定义 vs 变量对比 */
+        .comparison {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .comparison h2 {
+            color: #00d2ff;
+            margin-bottom: 20px;
+        }
+        .compare-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        .compare-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .compare-card h3 {
+            margin-bottom: 15px;
+            color: #38ef7d;
+        }
+        .compare-card.define { border: 2px solid #38ef7d; }
+        .compare-card.const { border: 2px solid #3a7bd5; }
+        .compare-card.var { border: 2px solid #f7b733; }
+        .feature-list {
+            list-style: none;
+            text-align: left;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        .check { color: #38ef7d; }
+        .cross { color: #ff6a6a; }
+
+        /* 状态机图 */
+        .state-machine {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .state-machine h2 {
+            color: #00d2ff;
+            margin-bottom: 20px;
+        }
+        .state-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .state-box {
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .state-idle { background: linear-gradient(135deg, #2c3e50, #3498db); }
+        .state-starting { background: linear-gradient(135deg, #f39c12, #e74c3c); }
+        .state-running { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .state-stopping { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .state-error { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+
+        /* 安全机制图 */
+        .safety {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .safety h2 {
+            color: #00d2ff;
+            margin-bottom: 20px;
+        }
+        .safety-layers {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .safety-layer {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .layer-name {
+            width: 120px;
+            text-align: right;
+            color: #888;
+        }
+        .layer-content {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .protection-item {
+            background: rgba(231, 76, 60, 0.3);
+            border: 1px solid #e74c3c;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>阶段一：基础入门</h1>
+        <p class="subtitle">项目架构与配置管理 | 可视化学习</p>
+
+        <!-- 模块架构图 -->
+        <div class="architecture">
+            <h2>📦 项目模块架构</h2>
+
+            <div class="layer">
+                <div class="layer-label">核心层</div>
+                <div class="module core">config.h<br><small>全局配置</small></div>
+                <div class="module core">motor_state.h<br><small>数据结构</small></div>
+                <div class="module core">main.cpp<br><small>程序入口</small></div>
+            </div>
+
+            <div class="arrow-down">↓</div>
+
+            <div class="layer">
+                <div class="layer-label">通信层</div>
+                <div class="module comm">wifi_manager<br><small>WiFi 配网</small></div>
+                <div class="module comm">websocket<br><small>实时通信</small></div>
+            </div>
+
+            <div class="arrow-down">↓</div>
+
+            <div class="layer">
+                <div class="layer-label">控制层</div>
+                <div class="module control">motor_fsm<br><small>状态机</small></div>
+                <div class="module control">esc_pwm<br><small>PWM 控制</small></div>
+                <div class="module control">pid_controller<br><small>PID 算法</small></div>
+                <div class="module control">relay<br><small>继电器</small></div>
+            </div>
+
+            <div class="arrow-down">↓</div>
+
+            <div class="layer">
+                <div class="layer-label">感知层</div>
+                <div class="module sense">hall_sensor<br><small>霍尔测速</small></div>
+                <div class="module sense">ina219_sensor<br><small>电流监测</small></div>
+                <div class="module sense">alarm<br><small>报警系统</small></div>
+            </div>
+
+            <div class="arrow-down">↓</div>
+
+            <div class="layer">
+                <div class="layer-label">显示层</div>
+                <div class="module display">display<br><small>ST7735 LCD</small></div>
+            </div>
+        </div>
+
+        <!-- 初始化流程图 -->
+        <div class="flowchart">
+            <h2>🔄 初始化流程顺序</h2>
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <strong>串口初始化</strong><br>
+                        <code>Serial.begin(115200)</code><br>
+                        <small>调试输出基础</small>
+                    </div>
+                </div>
+                <div class="arrow">↓</div>
+
+                <div class="flow-step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <strong>显示屏初始化</strong><br>
+                        <code>display_init()</code><br>
+                        <small>可视反馈，显示后续状态</small>
+                    </div>
+                </div>
+                <div class="arrow">↓</div>
+
+                <div class="flow-step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <strong>继电器初始化</strong><br>
+                        <code>relay_init()</code><br>
+                        <small>电源控制基础</small>
+                    </div>
+                </div>
+                <div class="arrow">↓</div>
+
+                <div class="flow-step">
+                    <div class="step-num">4</div>
+                    <div class="step-content">
+                        <strong>ESC PWM 初始化</strong> <span class="dep-arrow">← 必须在继电器后！</span><br>
+                        <code>esc_init()</code><br>
+                        <small>电机控制信号</small>
+                    </div>
+                </div>
+                <div class="arrow">↓</div>
+
+                <div class="flow-step">
+                    <div class="step-num">5</div>
+                    <div class="step-content">
+                        <strong>传感器初始化</strong><br>
+                        <code>hall_init()</code> + <code>ina219_init()</code><br>
+                        <small>数据采集</small>
+                    </div>
+                </div>
+                <div class="arrow">↓</div>
+
+                <div class="flow-step">
+                    <div class="step-num">6</div>
+                    <div class="step-content">
+                        <strong>逻辑层初始化</strong><br>
+                        <code>alarm_init()</code> → <code>fsm_init()</code><br>
+                        <small>安全与状态机</small>
+                    </div>
+                </div>
+                <div class="arrow">↓</div>
+
+                <div class="flow-step">
+                    <div class="step-num">7</div>
+                    <div class="step-content">
+                        <strong>网络层初始化</strong><br>
+                        <code>wifi_manager_init()</code> → <code>ws_init()</code><br>
+                        <small>WiFi + WebSocket</small>
+                    </div>
+                </div>
+                <div class="arrow">↓</div>
+
+                <div class="flow-step">
+                    <div class="step-num">8</div>
+                    <div class="step-content">
+                        <strong>RTOS 启动</strong> <span class="dep-arrow">← 最后启动！</span><br>
+                        <code>rtos_init()</code> → <code>rtos_start()</code><br>
+                        <small>进入多任务调度</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 宏定义对比 -->
+        <div class="comparison">
+            <h2>⚖️ 配置存储方式对比</h2>
+            <div class="compare-table">
+                <div class="compare-card define">
+                    <h3>#define 宏定义</h3>
+                    <code>#define ESC_FREQ 50</code>
+                    <ul class="feature-list">
+                        <li><span class="check">✓</span> 存储于 Flash</li>
+                        <li><span class="check">✓</span> 编译期替换，最快</li>
+                        <li><span class="check">✓</span> 不占用 RAM</li>
+                        <li><span class="cross">✗</span> 修改需重新编译</li>
+                        <li><span class="cross">✗</span> 无类型检查</li>
+                    </ul>
+                    <p style="margin-top:15px;color:#38ef7d;"><strong>推荐：不变配置</strong></p>
+                </div>
+
+                <div class="compare-card const">
+                    <h3>const 常量</h3>
+                    <code>const int freq = 50;</code>
+                    <ul class="feature-list">
+                        <li><span class="check">✓</span> 存储于 Flash</li>
+                        <li><span class="check">✓</span> 有类型检查</li>
+                        <li><span class="check">✓</span> 可用于调试</li>
+                        <li><span class="cross">✗</span> 占用 RAM（某些情况）</li>
+                        <li><span class="cross">✗</span> 运行时常量</li>
+                    </ul>
+                    <p style="margin-top:15px;color:#3a7bd5;"><strong>适用：只读参数</strong></p>
+                </div>
+
+                <div class="compare-card var">
+                    <h3>变量</h3>
+                    <code>int freq = 50;</code>
+                    <ul class="feature-list">
+                        <li><span class="check">✓</span> 运行时可修改</li>
+                        <li><span class="check">✓</span> 可动态调整</li>
+                        <li><span class="check">✓</span> 有类型检查</li>
+                        <li><span class="cross">✗</span> 占用 RAM</li>
+                        <li><span class="cross">✗</span> 访问较慢</li>
+                    </ul>
+                    <p style="margin-top:15px;color:#f7b733;"><strong>适用：可调参数</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 状态机图 -->
+        <div class="state-machine">
+            <h2>🎛️ 电机状态机</h2>
+            <div class="state-container">
+                <div class="state-box state-idle">
+                    <strong>IDLE</strong><br>
+                    <small>空闲</small>
+                </div>
+
+                <div style="display:flex;align-items:center;color:#888;">
+                    start →
+                </div>
+
+                <div class="state-box state-starting">
+                    <strong>STARTING</strong><br>
+                    <small>启动中</small>
+                </div>
+
+                <div style="display:flex;align-items:center;color:#888;">
+                    armed →
+                </div>
+
+                <div class="state-box state-running">
+                    <strong>RUNNING</strong><br>
+                    <small>运行中</small>
+                </div>
+            </div>
+
+            <br>
+
+            <div class="state-container">
+                <div class="state-box state-stopping">
+                    <strong>STOPPING</strong><br>
+                    <small>停止中</small>
+                </div>
+
+                <div style="display:flex;align-items:center;color:#888;">
+                    ← stop
+                </div>
+
+                <div class="state-box state-error">
+                    <strong>ERROR</strong><br>
+                    <small>错误</small>
+                </div>
+
+                <div style="display:flex;align-items:center;color:#888;">
+                    ← error
+                </div>
+            </div>
+
+            <p style="text-align:center;margin-top:20px;color:#888;">
+                💡 <strong>为什么需要中间状态？</strong> ESC 解锁需要时间，电机有惯性，防止命令冲突
+            </p>
+        </div>
+
+        <!-- 安全机制 -->
+        <div class="safety">
+            <h2>🛡️ Fail-safe 安全机制</h2>
+            <div class="safety-layers">
+                <div class="safety-layer">
+                    <div class="layer-name">硬件层</div>
+                    <div class="layer-content">
+                        <div class="protection-item">继电器可控电源</div>
+                        <div class="protection-item">GPIO 默认低电平</div>
+                        <div class="protection-item">保险丝保护</div>
+                    </div>
+                </div>
+
+                <div class="safety-layer">
+                    <div class="layer-name">通信层</div>
+                    <div class="layer-content">
+                        <div class="protection-item">WebSocket 断开 → 停机</div>
+                        <div class="protection-item">命令超时 10s → 停机</div>
+                        <div class="protection-item">WiFi 断开 → 停机</div>
+                    </div>
+                </div>
+
+                <div class="safety-layer">
+                    <div class="layer-name">状态机层</div>
+                    <div class="layer-content">
+                        <div class="protection-item">未校准禁止控制</div>
+                        <div class="protection-item">状态转换条件明确</div>
+                        <div class="protection-item">错误状态自动停机</div>
+                    </div>
+                </div>
+
+                <div class="safety-layer">
+                    <div class="layer-name">保护层</div>
+                    <div class="layer-content">
+                        <div class="protection-item">过流保护 >5A</div>
+                        <div class="protection-item">过温保护 >80°C</div>
+                        <div class="protection-item">堵转保护 3秒</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

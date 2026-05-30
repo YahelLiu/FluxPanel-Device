@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阶段四：PID 闭环控制 - 可视化学习</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a192f 0%, #172a45 50%, #1a365d 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #64ffda, #48cae4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { text-align: center; color: #888; margin-bottom: 40px; }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .section h2 { color: #64ffda; margin-bottom: 20px; font-size: 1.5em; }
+
+        /* PID 公式 */
+        .pid-formula {
+            background: #0d1b2a;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .formula-main {
+            font-size: 1.8em;
+            font-family: 'Times New Roman', serif;
+            margin-bottom: 20px;
+        }
+        .formula-part {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 10px;
+        }
+        .formula-part.p { background: rgba(231, 76, 60, 0.3); border: 1px solid #e74c3c; }
+        .formula-part.i { background: rgba(46, 204, 113, 0.3); border: 1px solid #2ecc71; }
+        .formula-part.d { background: rgba(52, 152, 219, 0.3); border: 1px solid #3498db; }
+
+        /* PID 参数图 */
+        .pid-params {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .param-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .param-card.p { border-top: 4px solid #e74c3c; }
+        .param-card.i { border-top: 4px solid #2ecc71; }
+        .param-card.d { border-top: 4px solid #3498db; }
+        .param-icon { font-size: 2.5em; margin-bottom: 10px; }
+        .param-name { font-size: 1.3em; font-weight: bold; margin-bottom: 5px; }
+        .param-desc { color: #888; font-size: 0.9em; margin-bottom: 15px; }
+        .param-effect {
+            text-align: left;
+            font-size: 0.85em;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .param-effect li { margin: 5px 0; list-style: none; }
+        .effect-up { color: #e74c3c; }
+        .effect-down { color: #2ecc71; }
+
+        /* 响应曲线 */
+        .response-curve {
+            background: #0d1b2a;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .curve-container {
+            position: relative;
+            height: 200px;
+            margin: 20px 0;
+        }
+        .curve-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+        }
+        .curve-grid > div {
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .curve-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .target-line {
+            position: absolute;
+            top: 20%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #f39c12;
+            opacity: 0.5;
+        }
+        .target-label {
+            position: absolute;
+            top: 15%;
+            right: 5%;
+            color: #f39c12;
+            font-size: 0.8em;
+        }
+
+        .curve-legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 30px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* 积分饱和 */
+        .saturation-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .sat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .sat-card.bad { border: 2px solid #e74c3c; }
+        .sat-card.good { border: 2px solid #2ecc71; }
+        .sat-card h3 { margin-bottom: 15px; }
+        .sat-card.bad h3 { color: #e74c3c; }
+        .sat-card.good h3 { color: #2ecc71; }
+
+        .sat-scenario {
+            background: #0d1b2a;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .sat-step {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9em;
+        }
+        .sat-step:last-child { border-bottom: none; }
+
+        /* 霍尔传感器 */
+        .hall-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .hall-motor {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            position: relative;
+            border: 5px solid #1abc9c;
+        }
+        .hall-pole {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e74c3c;
+        }
+        .hall-sensor {
+            position: absolute;
+            top: 50%;
+            right: -30px;
+            transform: translateY(-50%);
+            background: #3498db;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+
+        .hall-formula {
+            background: #0d1b2a;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .hall-formula h4 { color: #64ffda; margin-bottom: 15px; }
+        .formula-box {
+            background: rgba(100, 255, 218, 0.1);
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+
+        /* 滤波效果 */
+        .filter-demo {
+            background: #0d1b2a;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .filter-label {
+            width: 100px;
+            text-align: right;
+            color: #888;
+        }
+        .filter-bars {
+            flex: 1;
+            display: flex;
+            gap: 3px;
+            height: 30px;
+            align-items: flex-end;
+        }
+        .filter-bar {
+            width: 8px;
+            background: #3498db;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.3s;
+        }
+        .filter-bar.filtered {
+            background: #2ecc71;
+            height: 20px !important;
+        }
+
+        /* 调参流程 */
+        .tuning-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .tuning-step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .tuning-num {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #64ffda, #48cae4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #0a192f;
+            font-size: 1.3em;
+            flex-shrink: 0;
+        }
+        .tuning-content {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            padding: 15px 20px;
+            border-radius: 10px;
+        }
+        .tuning-action {
+            font-weight: bold;
+            color: #64ffda;
+            margin-bottom: 5px;
+        }
+        .tuning-detail { font-size: 0.9em; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>阶段四：PID 闭环控制</h1>
+        <p class="subtitle">算法原理与实现 | 可视化学习</p>
+
+        <!-- PID 公式 -->
+        <div class="section">
+            <h2>📐 PID 控制公式</h2>
+            <div class="pid-formula">
+                <div class="formula-main">
+                    u(t) =
+                    <span class="formula-part p">K<sub>p</sub> · e(t)</span>
+                    +
+                    <span class="formula-part i">K<sub>i</sub> · ∫e dt</span>
+                    +
+                    <span class="formula-part d">K<sub>d</sub> · de/dt</span>
+                </div>
+                <p style="color:#888;">e(t) = 设定值 - 实际值（误差）</p>
+            </div>
+
+            <div class="pid-params">
+                <div class="param-card p">
+                    <div class="param-icon">🎯</div>
+                    <div class="param-name">比例 P</div>
+                    <div class="param-desc">响应强度</div>
+                    <ul class="param-effect">
+                        <li><span class="effect-up">↑</span> 响应速度加快</li>
+                        <li><span class="effect-up">↑</span> 超调增加</li>
+                        <li><span class="effect-up">↑↑</span> 可能震荡</li>
+                    </ul>
+                    <p style="margin-top:10px;font-size:0.85em;color:#e74c3c;">
+                        类似弹簧刚度
+                    </p>
+                </div>
+
+                <div class="param-card i">
+                    <div class="param-icon">📊</div>
+                    <div class="param-name">积分 I</div>
+                    <div class="param-desc">历史补偿</div>
+                    <ul class="param-effect">
+                        <li><span class="effect-up">↑</span> 消除稳态误差</li>
+                        <li><span class="effect-up">↑</span> 响应变慢</li>
+                        <li><span class="effect-up">↑↑</span> 积分饱和</li>
+                    </ul>
+                    <p style="margin-top:10px;font-size:0.85em;color:#2ecc71;">
+                        类似"记忆"
+                    </p>
+                </div>
+
+                <div class="param-card d">
+                    <div class="param-icon">📉</div>
+                    <div class="param-name">微分 D</div>
+                    <div class="param-desc">趋势预测</div>
+                    <ul class="param-effect">
+                        <li><span class="effect-down">↓</span> 抑制超调</li>
+                        <li><span class="effect-down">↓</span> 增加阻尼</li>
+                        <li><span class="effect-up">↑↑</span> 噪声敏感</li>
+                    </ul>
+                    <p style="margin-top:10px;font-size:0.85em;color:#3498db;">
+                        类似阻尼器
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 响应曲线 -->
+        <div class="section">
+            <h2>📈 响应曲线对比</h2>
+            <div class="response-curve">
+                <div class="curve-container">
+                    <div class="curve-grid">
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                        <div></div><div></div><div></div><div></div><div></div>
+                    </div>
+                    <div class="target-line"></div>
+                    <div class="target-label">目标 RPM</div>
+
+                    <!-- SVG 曲线 -->
+                    <svg class="curve-line" viewBox="0 0 400 200">
+                        <!-- Kp 太大：震荡 -->
+                        <path d="M0,180 Q50,180 80,50 T120,30 T160,80 T200,40 T240,60 T280,45 T320,50 T400,40"
+                              fill="none" stroke="#e74c3c" stroke-width="2"/>
+
+                        <!-- Kp 适中：平滑 -->
+                        <path d="M0,180 Q60,180 100,100 T160,50 T220,42 T280,40 T340,40 T400,40"
+                              fill="none" stroke="#2ecc71" stroke-width="2"/>
+
+                        <!-- Ki 消除稳态误差 -->
+                        <path d="M0,180 Q80,180 140,80 T200,55 T260,48 T320,45 T400,45"
+                              fill="none" stroke="#3498db" stroke-width="2" stroke-dasharray="5,5"/>
+                    </svg>
+                </div>
+
+                <div class="curve-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background:#e74c3c;"></div>
+                        <span>Kp 太大（震荡）</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background:#2ecc71;"></div>
+                        <span>Kp 适中（理想）</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background:#3498db;"></div>
+                        <span>有 Ki（无稳态误差）</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 积分饱和 -->
+        <div class="section">
+            <h2>⚠️ 积分饱和问题</h2>
+            <div class="saturation-compare">
+                <div class="sat-card bad">
+                    <h3>❌ 无抗饱和</h3>
+                    <p style="color:#888;">电机堵转场景</p>
+                    <div class="sat-scenario">
+                        <div class="sat-step">1. 目标 RPM=3000，实际=0</div>
+                        <div class="sat-step">2. 误差=3000，积分项不断累积</div>
+                        <div class="sat-step">3. 输出达到 100% 饱和</div>
+                        <div class="sat-step">4. 堵转解除后，积分仍很大</div>
+                        <div class="sat-step" style="color:#e74c3c;">5. 电机狂飙失控！</div>
+                    </div>
+                </div>
+
+                <div class="sat-card good">
+                    <h3>✅ 有抗饱和</h3>
+                    <p style="color:#888;">限幅保护</p>
+                    <div class="sat-scenario">
+                        <div class="sat-step">1. 目标 RPM=3000，实际=0</div>
+                        <div class="sat-step">2. 误差=3000，积分累积</div>
+                        <div class="sat-step">3. 积分值被限制在上限</div>
+                        <div class="sat-step">4. 堵转解除后，积分正常</div>
+                        <div class="sat-step" style="color:#2ecc71;">5. 平稳恢复正常控制</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:#0d1b2a;padding:15px;border-radius:10px;margin-top:20px;text-align:center;">
+                <code style="color:#64ffda;">
+                    integralMax = (outputMax - P) / Ki
+                </code>
+                <p style="color:#888;margin-top:10px;font-size:0.9em;">
+                    当 P + I 接近输出上限时，自动限制积分值
+                </p>
+            </div>
+        </div>
+
+        <!-- 霍尔传感器 -->
+        <div class="section">
+            <h2>🔄 霍尔传感器测速</h2>
+            <div class="hall-diagram">
+                <div class="hall-motor">
+                    <!-- 7对极的位置 -->
+                    <div class="hall-pole" style="top:10px;left:50%;transform:translateX(-50%);"></div>
+                    <div class="hall-pole" style="top:30px;right:20px;"></div>
+                    <div class="hall-pole" style="top:50%;right:10px;transform:translateY(-50%);"></div>
+                    <div class="hall-pole" style="bottom:30px;right:20px;"></div>
+                    <div class="hall-pole" style="bottom:10px;left:50%;transform:translateX(-50%);"></div>
+                    <div class="hall-pole" style="bottom:30px;left:20px;"></div>
+                    <div class="hall-pole" style="top:50%;left:10px;transform:translateY(-50%);"></div>
+
+                    <div class="hall-sensor">GPIO 9<br>中断</div>
+                </div>
+
+                <div class="hall-formula">
+                    <h4>RPM 计算公式</h4>
+                    <div class="formula-box">
+                        RPM = (Δp × 60) / (N × Δt)
+                    </div>
+                    <p style="color:#888;margin-top:10px;font-size:0.85em;">
+                        Δp = 脉冲增量<br>
+                        N = 极对数 (本项目: 7)<br>
+                        Δt = 时间间隔 (秒)
+                    </p>
+                </div>
+            </div>
+
+            <!-- 滤波效果 -->
+            <div style="margin-top:30px;">
+                <h3 style="margin-bottom:15px;">📉 滑动平均滤波</h3>
+                <div class="filter-demo">
+                    <div class="filter-row">
+                        <div class="filter-label">原始 RPM</div>
+                        <div class="filter-bars">
+                            <div class="filter-bar" style="height:25px;"></div>
+                            <div class="filter-bar" style="height:18px;"></div>
+                            <div class="filter-bar" style="height:30px;"></div>
+                            <div class="filter-bar" style="height:22px;"></div>
+                            <div class="filter-bar" style="height:28px;"></div>
+                            <div class="filter-bar" style="height:20px;"></div>
+                            <div class="filter-bar" style="height:26px;"></div>
+                            <div class="filter-bar" style="height:24px;"></div>
+                            <div class="filter-bar" style="height:19px;"></div>
+                            <div class="filter-bar" style="height:27px;"></div>
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-label">滤波后</div>
+                        <div class="filter-bars">
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                            <div class="filter-bar filtered"></div>
+                        </div>
+                    </div>
+                </div>
+                <p style="text-align:center;color:#888;margin-top:10px;">
+                    窗口大小 = 5，越平滑但响应越慢
+                </p>
+            </div>
+        </div>
+
+        <!-- 调参流程 -->
+        <div class="section">
+            <h2>🎛️ PID 调参流程</h2>
+            <div class="tuning-flow">
+                <div class="tuning-step">
+                    <div class="tuning-num">1</div>
+                    <div class="tuning-content">
+                        <div class="tuning-action">关闭 I 和 D，调 Kp</div>
+                        <div class="tuning-detail">Ki=0, Kd=0，逐步增大 Kp 直到开始震荡，记录 Kc 和 Tc</div>
+                    </div>
+                </div>
+
+                <div class="tuning-step">
+                    <div class="tuning-num">2</div>
+                    <div class="tuning-content">
+                        <div class="tuning-action">设置初始参数</div>
+                        <div class="tuning-detail">Kp = 0.6×Kc，Ki = 2×Kp/Tc，Kd = Kp×Tc/8</div>
+                    </div>
+                </div>
+
+                <div class="tuning-step">
+                    <div class="tuning-num">3</div>
+                    <div class="tuning-content">
+                        <div class="tuning-action">微调优化</div>
+                        <div class="tuning-detail">超调大 → 增 Kd、减 Kp | 响应慢 → 增 Kp | 稳态误差 → 增 Ki</div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin-top:20px;">
+                💡 调参顺序：Kp（响应）→ Kd（阻尼）→ Ki（精度）
+            </p>
+        </div>
+    </div>
+</body>
+</html>

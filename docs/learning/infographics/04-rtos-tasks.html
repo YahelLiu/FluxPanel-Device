@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RTOS 任务架构 - ESP32 BLDC 电机控制</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.font.im/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'academic-bg': '#FAF7F0',
+            'academic-text': '#1F2933',
+            'academic-secondary': '#475569',
+            'academic-border': '#CBD5E1',
+            'academic-accent': '#1E40AF',
+          },
+          fontFamily: {
+            'serif': ['IBM Plex Serif', 'Noto Serif SC', 'Source Han Serif SC', 'serif'],
+            'mono': ['IBM Plex Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .block-wrapper { position: relative; }
+    .block-toolbar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .block-wrapper:hover .block-toolbar { opacity: 1; }
+    .export-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .export-btn:hover {
+      background: #EFF6FF;
+      border-color: #1E40AF;
+      color: #1E40AF;
+    }
+  </style>
+</head>
+<body class="bg-academic-bg font-serif antialiased">
+
+  <!-- Block Wrapper -->
+  <div class="block-wrapper">
+
+    <!-- Export Toolbar -->
+    <div class="block-toolbar">
+      <button class="export-btn" data-export-block="block-004">PNG</button>
+      <button class="export-btn" data-export-block-svg="block-004">SVG</button>
+      <button class="export-btn" data-copy-block="block-004">Copy</button>
+    </div>
+
+    <!-- Visual Block: Medium (1400×800) -->
+    <div id="block-004" class="visual-block relative bg-[#FAF7F0]" data-export="block" data-size="medium" style="width: 1400px; height: 800px; margin: 0 auto; overflow: hidden;">
+
+      <div class="relative z-10 flex flex-col px-[60px] py-[50px] h-full">
+
+      <!-- Title -->
+      <div class="mb-8">
+        <h1 class="text-[42px] font-semibold text-academic-text mb-3 leading-tight">FreeRTOS 任务优先级架构</h1>
+        <p class="text-[20px] text-academic-secondary">抢占式调度，PID 控制任务获得最高优先级</p>
+      </div>
+
+      <!-- Content -->
+      <div class="flex flex-col justify-center flex-1">
+
+        <!-- Priority Timeline -->
+        <div class="space-y-4 mb-8">
+
+          <!-- MotorTask - P3 (Highest) -->
+          <div class="flex items-center gap-6">
+            <div class="w-32 flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-academic-accent flex items-center justify-center">
+                <span class="text-white font-bold font-mono text-sm">3</span>
+              </div>
+              <span class="text-sm font-mono text-academic-accent">P3</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-36">
+                <p class="text-base font-semibold text-academic-accent">MotorTask</p>
+                <p class="text-xs text-academic-secondary">PID 控制</p>
+              </div>
+              <div class="flex-1 h-12 bg-[#EFF6FF] border-2 border-academic-accent rounded-lg flex items-center px-5">
+                <span class="text-sm font-mono text-academic-text w-28">周期: <span class="text-academic-accent font-bold">10ms</span></span>
+                <span class="text-sm font-mono text-academic-text w-20">栈: 2KB</span>
+                <span class="text-sm text-academic-secondary">fsm_update · safety_check · pid_compute</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- WiFiTask - P2 -->
+          <div class="flex items-center gap-6">
+            <div class="w-32 flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-[#94A3B8] flex items-center justify-center">
+                <span class="text-white font-bold font-mono text-sm">2</span>
+              </div>
+              <span class="text-sm font-mono text-academic-secondary">P2</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-36">
+                <p class="text-base font-semibold text-academic-text">WiFiTask</p>
+                <p class="text-xs text-academic-secondary">网络通信</p>
+              </div>
+              <div class="flex-1 h-10 bg-white border-2 border-academic-border rounded-lg flex items-center px-5">
+                <span class="text-sm font-mono text-academic-text w-28">模式: 事件驱动</span>
+                <span class="text-sm font-mono text-academic-text w-20">栈: 4KB</span>
+                <span class="text-sm text-academic-secondary">webSocket.loop · 心跳保活</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SensorTask - P1 -->
+          <div class="flex items-center gap-6">
+            <div class="w-32 flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-[#CBD5E1] flex items-center justify-center">
+                <span class="text-academic-text font-bold font-mono text-sm">1</span>
+              </div>
+              <span class="text-sm font-mono text-academic-secondary">P1</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-36">
+                <p class="text-base font-semibold text-academic-text">SensorTask</p>
+                <p class="text-xs text-academic-secondary">数据采集</p>
+              </div>
+              <div class="flex-1 h-10 bg-white border-2 border-academic-border rounded-lg flex items-center px-5">
+                <span class="text-sm font-mono text-academic-text w-28">周期: 100ms</span>
+                <span class="text-sm font-mono text-academic-text w-20">栈: 2KB</span>
+                <span class="text-sm text-academic-secondary">hall_get_rpm · ina219_read</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- DisplayTask - P1 -->
+          <div class="flex items-center gap-6">
+            <div class="w-32 flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-[#CBD5E1] flex items-center justify-center">
+                <span class="text-academic-text font-bold font-mono text-sm">1</span>
+              </div>
+              <span class="text-sm font-mono text-academic-secondary">P1</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-36">
+                <p class="text-base font-semibold text-academic-text">DisplayTask</p>
+                <p class="text-xs text-academic-secondary">人机界面</p>
+              </div>
+              <div class="flex-1 h-10 bg-white border-2 border-academic-border rounded-lg flex items-center px-5">
+                <span class="text-sm font-mono text-academic-text w-28">周期: 100ms</span>
+                <span class="text-sm font-mono text-academic-text w-20">栈: 2KB</span>
+                <span class="text-sm text-academic-secondary">display_render · 状态刷新</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Key Techniques -->
+        <div class="grid grid-cols-3 gap-6">
+
+          <!-- vTaskDelayUntil -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-text mb-3">精确周期控制</h4>
+            <div class="bg-[#FAFAFA] border border-academic-border rounded p-3 mb-3">
+              <pre class="text-xs font-mono text-academic-text overflow-x-auto">vTaskDelayUntil(&lastWakeTime, period);
+// 绝对周期，无漂移</pre>
+            </div>
+            <p class="text-xs text-academic-secondary">vTaskDelay 会累积误差</p>
+          </div>
+
+          <!-- Mutex -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-text mb-3">互斥锁保护</h4>
+            <div class="bg-[#FAFAFA] border border-academic-border rounded p-3 mb-3">
+              <pre class="text-xs font-mono text-academic-text overflow-x-auto">xSemaphoreTake(motorStateMutex, 10);
+// 临界区访问
+xSemaphoreGive(motorStateMutex);</pre>
+            </div>
+            <p class="text-xs text-academic-secondary">支持优先级继承</p>
+          </div>
+
+          <!-- Why P3 Highest -->
+          <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-accent mb-3">为什么 MotorTask 最高？</h4>
+            <div class="space-y-2">
+              <div class="flex items-start gap-2">
+                <span class="text-academic-accent font-mono text-sm">·</span>
+                <p class="text-sm text-academic-secondary">PID 需要严格时序</p>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-academic-accent font-mono text-sm">·</span>
+                <p class="text-sm text-academic-secondary">dt 波动导致积分不稳定</p>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-academic-accent font-mono text-sm">·</span>
+                <p class="text-sm text-academic-secondary">微分项噪声放大</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Export Module -->
+  <script type="module">
+    import { toPng, toSvg } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm';
+
+    async function exportBlock(id, format = 'png') {
+      const node = document.getElementById(id);
+      if (!node) return;
+
+      // 保存原始 margin
+      const originalMargin = node.style.margin;
+      // 临时移除 margin，确保导出时内容居中
+      node.style.margin = '0';
+
+      const options = {
+        pixelRatio: 2,
+        backgroundColor: '#FAF7F0',
+        filter: (n) => !n.classList?.contains('block-toolbar'),
+        skipFonts: true
+      };
+
+      try {
+        const dataUrl = format === 'svg' ? await toSvg(node, options) : await toPng(node, options);
+        const link = document.createElement('a');
+        link.download = `${id}.${format}`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) { console.error('Export failed:', e); }
+      finally {
+        // 恢复原始 margin
+        node.style.margin = originalMargin;
+      }
+    }
+
+    async function copyBlockHtml(id) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      await navigator.clipboard.writeText(node.outerHTML);
+    }
+
+    document.querySelectorAll('[data-export-block]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlock, 'png'));
+    });
+    document.querySelectorAll('[data-export-block-svg]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlockSvg, 'svg'));
+    });
+    document.querySelectorAll('[data-copy-block]').forEach(btn => {
+      btn.addEventListener('click', () => copyBlockHtml(btn.dataset.copyBlock));
+    });
+  </script>
+
+</body>
+</html>

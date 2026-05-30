@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PID 闭环控制 - ESP32 BLDC 电机控制</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.font.im/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'academic-bg': '#FAF7F0',
+            'academic-text': '#1F2933',
+            'academic-secondary': '#475569',
+            'academic-border': '#CBD5E1',
+            'academic-accent': '#1E40AF',
+          },
+          fontFamily: {
+            'serif': ['IBM Plex Serif', 'Noto Serif SC', 'Source Han Serif SC', 'serif'],
+            'mono': ['IBM Plex Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .block-wrapper { position: relative; }
+    .block-toolbar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .block-wrapper:hover .block-toolbar { opacity: 1; }
+    .export-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .export-btn:hover {
+      background: #EFF6FF;
+      border-color: #1E40AF;
+      color: #1E40AF;
+    }
+  </style>
+</head>
+<body class="bg-academic-bg font-serif antialiased">
+
+  <!-- Block Wrapper -->
+  <div class="block-wrapper">
+
+    <!-- Export Toolbar -->
+    <div class="block-toolbar">
+      <button class="export-btn" data-export-block="block-005">PNG</button>
+      <button class="export-btn" data-export-block-svg="block-005">SVG</button>
+      <button class="export-btn" data-copy-block="block-005">Copy</button>
+    </div>
+
+    <!-- Visual Block: Large (1600×900) -->
+    <div id="block-005" class="visual-block relative bg-[#FAF7F0]" data-export="block" data-size="large" style="width: 1600px; height: 900px; margin: 0 auto; overflow: hidden;">
+
+      <div class="relative z-10 flex flex-col px-[80px] py-[50px] h-full">
+
+      <!-- Title -->
+      <div class="mb-8">
+        <h1 class="text-[42px] font-semibold text-academic-text mb-3 leading-tight">PID 闭环控制算法</h1>
+        <p class="text-[20px] text-academic-secondary">比例 · 积分 · 微分三环协同，实现精确转速控制</p>
+      </div>
+
+      <!-- Content -->
+      <div class="flex flex-col justify-center flex-1">
+
+        <!-- PID Formula + Block Diagram -->
+        <div class="grid grid-cols-2 gap-8 mb-8">
+
+          <!-- Left: PID Formula -->
+          <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-academic-accent mb-4">PID 控制公式</h3>
+            <div class="bg-white border border-academic-accent rounded-lg p-4 mb-4">
+              <p class="text-xl font-mono text-academic-text text-center">
+                u(t) = K<sub>p</sub>e(t) + K<sub>i</sub>∫e(τ)dτ + K<sub>d</sub>de/dt
+              </p>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="bg-white border border-academic-border rounded p-2">
+                <p class="text-lg font-bold text-academic-accent font-mono">P</p>
+                <p class="text-xs text-academic-secondary">响应强度</p>
+              </div>
+              <div class="bg-white border border-academic-border rounded p-2">
+                <p class="text-lg font-bold text-academic-accent font-mono">I</p>
+                <p class="text-xs text-academic-secondary">历史补偿</p>
+              </div>
+              <div class="bg-white border border-academic-border rounded p-2">
+                <p class="text-lg font-bold text-academic-accent font-mono">D</p>
+                <p class="text-xs text-academic-secondary">趋势预测</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Control Loop -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-academic-text mb-4">闭环控制流程</h3>
+            <div class="space-y-3">
+              <!-- Step 1 -->
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-academic-accent text-white text-sm font-bold flex items-center justify-center font-mono">1</div>
+                <div class="flex-1 bg-[#FAFAFA] border border-academic-border rounded px-3 py-2">
+                  <p class="text-sm text-academic-text">计算误差 <span class="font-mono text-academic-accent">e = RPM<sub>set</sub> - RPM<sub>act</sub></span></p>
+                </div>
+              </div>
+              <!-- Step 2 -->
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-academic-accent text-white text-sm font-bold flex items-center justify-center font-mono">2</div>
+                <div class="flex-1 bg-[#EFF6FF] border border-academic-accent rounded px-3 py-2">
+                  <p class="text-sm text-academic-text">PID 计算 <span class="font-mono text-academic-accent">output = P + I + D</span></p>
+                </div>
+              </div>
+              <!-- Step 3 -->
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-academic-accent text-white text-sm font-bold flex items-center justify-center font-mono">3</div>
+                <div class="flex-1 bg-[#FAFAFA] border border-academic-border rounded px-3 py-2">
+                  <p class="text-sm text-academic-text">输出 PWM <span class="font-mono text-academic-accent">ESC → BLDC 电机</span></p>
+                </div>
+              </div>
+              <!-- Step 4: Feedback -->
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#4CAF50] text-white text-sm font-bold flex items-center justify-center font-mono">4</div>
+                <div class="flex-1 bg-[#E8F5E9] border border-[#4CAF50] rounded px-3 py-2">
+                  <p class="text-sm text-academic-text">霍尔测速反馈 <span class="font-mono text-[#4CAF50]">RPM<sub>act</sub> → 闭环</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- P/I/D Details -->
+        <div class="grid grid-cols-3 gap-6 mb-6">
+
+          <!-- P Term -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="text-2xl font-bold text-academic-accent font-mono">P</span>
+              <div>
+                <h4 class="text-base font-semibold text-academic-text">比例项</h4>
+                <p class="text-xs text-academic-secondary">P = K<sub>p</sub> × e(t)</p>
+              </div>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <span class="text-academic-secondary">K<sub>p</sub> 小</span>
+                <span class="text-academic-secondary">响应慢</span>
+              </div>
+              <div class="flex justify-between bg-[#EFF6FF] border border-academic-accent rounded px-2 py-1">
+                <span class="text-academic-accent font-medium">K<sub>p</sub> 适中</span>
+                <span class="text-academic-accent font-medium">快速响应</span>
+              </div>
+              <div class="flex justify-between bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <span class="text-academic-secondary">K<sub>p</sub> 大</span>
+                <span class="text-academic-secondary">震荡</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- I Term -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="text-2xl font-bold text-academic-accent font-mono">I</span>
+              <div>
+                <h4 class="text-base font-semibold text-academic-text">积分项</h4>
+                <p class="text-xs text-academic-secondary">I = K<sub>i</sub> × Σe(t)·dt</p>
+              </div>
+            </div>
+            <div class="space-y-2 text-sm mb-3">
+              <div class="flex justify-between bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <span class="text-academic-secondary">K<sub>i</sub> 小</span>
+                <span class="text-academic-secondary">静差大</span>
+              </div>
+              <div class="flex justify-between bg-[#EFF6FF] border border-academic-accent rounded px-2 py-1">
+                <span class="text-academic-accent font-medium">K<sub>i</sub> 适中</span>
+                <span class="text-academic-accent font-medium">消除静差</span>
+              </div>
+              <div class="flex justify-between bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <span class="text-academic-secondary">K<sub>i</sub> 大</span>
+                <span class="text-academic-secondary">超调</span>
+              </div>
+            </div>
+            <div class="bg-[#FFEBEE] border border-[#F44336] rounded px-2 py-1">
+              <p class="text-xs text-[#C62828]">抗饱和: constrain(integral)</p>
+            </div>
+          </div>
+
+          <!-- D Term -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="text-2xl font-bold text-academic-accent font-mono">D</span>
+              <div>
+                <h4 class="text-base font-semibold text-academic-text">微分项</h4>
+                <p class="text-xs text-academic-secondary">D = K<sub>d</sub> × de/dt</p>
+              </div>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <span class="text-academic-secondary">K<sub>d</sub> 小</span>
+                <span class="text-academic-secondary">震荡弱</span>
+              </div>
+              <div class="flex justify-between bg-[#EFF6FF] border border-academic-accent rounded px-2 py-1">
+                <span class="text-academic-accent font-medium">K<sub>d</sub> 适中</span>
+                <span class="text-academic-accent font-medium">平滑响应</span>
+              </div>
+              <div class="flex justify-between bg-[#FAFAFA] border border-academic-border rounded px-2 py-1">
+                <span class="text-academic-secondary">K<sub>d</sub> 大</span>
+                <span class="text-academic-secondary">噪声敏感</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Tuning Steps -->
+        <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-5">
+          <h4 class="text-base font-semibold text-academic-accent mb-4">调参实践步骤</h4>
+          <div class="flex justify-center gap-8">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-academic-accent text-white text-sm font-bold flex items-center justify-center font-mono">1</div>
+              <div>
+                <p class="text-sm font-medium text-academic-text">先调 K<sub>p</sub></p>
+                <p class="text-xs text-academic-secondary">获得基本响应速度</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-academic-secondary">
+              <svg width="24" height="12" viewBox="0 0 24 12">
+                <path d="M0 6 L18 6 M14 2 L20 6 L14 10" stroke="currentColor" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-academic-accent text-white text-sm font-bold flex items-center justify-center font-mono">2</div>
+              <div>
+                <p class="text-sm font-medium text-academic-text">再调 K<sub>d</sub></p>
+                <p class="text-xs text-academic-secondary">抑制超调和震荡</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-academic-secondary">
+              <svg width="24" height="12" viewBox="0 0 24 12">
+                <path d="M0 6 L18 6 M14 2 L20 6 L14 10" stroke="currentColor" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-academic-accent text-white text-sm font-bold flex items-center justify-center font-mono">3</div>
+              <div>
+                <p class="text-sm font-medium text-academic-text">最后调 K<sub>i</sub></p>
+                <p class="text-xs text-academic-secondary">消除稳态误差</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Export Module -->
+  <script type="module">
+    import { toPng, toSvg } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm';
+
+    async function exportBlock(id, format = 'png') {
+      const node = document.getElementById(id);
+      if (!node) return;
+
+      // 保存原始 margin
+      const originalMargin = node.style.margin;
+      // 临时移除 margin，确保导出时内容居中
+      node.style.margin = '0';
+
+      const options = {
+        pixelRatio: 2,
+        backgroundColor: '#FAF7F0',
+        filter: (n) => !n.classList?.contains('block-toolbar'),
+        skipFonts: true
+      };
+
+      try {
+        const dataUrl = format === 'svg' ? await toSvg(node, options) : await toPng(node, options);
+        const link = document.createElement('a');
+        link.download = `${id}.${format}`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) { console.error('Export failed:', e); }
+      finally {
+        // 恢复原始 margin
+        node.style.margin = originalMargin;
+      }
+    }
+
+    async function copyBlockHtml(id) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      await navigator.clipboard.writeText(node.outerHTML);
+    }
+
+    document.querySelectorAll('[data-export-block]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlock, 'png'));
+    });
+    document.querySelectorAll('[data-export-block-svg]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlockSvg, 'svg'));
+    });
+    document.querySelectorAll('[data-copy-block]').forEach(btn => {
+      btn.addEventListener('click', () => copyBlockHtml(btn.dataset.copyBlock));
+    });
+  </script>
+
+</body>
+</html>

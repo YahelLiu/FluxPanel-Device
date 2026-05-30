@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:www.st.com)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:www.digikey.com)",
+      "WebFetch(domain:embetronicx.com)",
+      "WebFetch(domain:controllerstech.com)",
+      "WebFetch(domain:deepbluembedded.com)",
+      "WebFetch(domain:www.electronicshub.org)",
+      "WebFetch(domain:simple-circuit.com)",
+      "WebFetch(domain:docs.embetronicx.com)",
+      "WebFetch(domain:www.norwegiancreations.com)",
+      "WebFetch(domain:www.gigadevice.com)",
+      "WebFetch(domain:oscarliang.com)",
+      "WebFetch(domain:www.eetimes.eu)",
+      "WebFetch(domain:www.electronicdesign.com)",
+      "WebFetch(domain:eetimes.com)",
+      "WebFetch(domain:hackaday.com)",
+      "WebFetch(domain:www.mouser.com)",
+      "WebFetch(domain:stm32world.com)",
+      "WebFetch(domain:www.waveshare.com)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

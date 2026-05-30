@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>状态机设计 - ESP32 BLDC 电机控制</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.font.im/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'academic-bg': '#FAF7F0',
+            'academic-text': '#1F2933',
+            'academic-secondary': '#475569',
+            'academic-border': '#CBD5E1',
+            'academic-accent': '#1E40AF',
+          },
+          fontFamily: {
+            'serif': ['IBM Plex Serif', 'Noto Serif SC', 'Source Han Serif SC', 'serif'],
+            'mono': ['IBM Plex Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .block-wrapper { position: relative; }
+    .block-toolbar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .block-wrapper:hover .block-toolbar { opacity: 1; }
+    .export-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .export-btn:hover {
+      background: #EFF6FF;
+      border-color: #1E40AF;
+      color: #1E40AF;
+    }
+  </style>
+</head>
+<body class="bg-academic-bg font-serif antialiased">
+
+  <!-- Block Wrapper -->
+  <div class="block-wrapper">
+
+    <!-- Export Toolbar -->
+    <div class="block-toolbar">
+      <button class="export-btn" data-export-block="block-006">PNG</button>
+      <button class="export-btn" data-export-block-svg="block-006">SVG</button>
+      <button class="export-btn" data-copy-block="block-006">Copy</button>
+    </div>
+
+    <!-- Visual Block: Medium (1400×800) -->
+    <div id="block-006" class="visual-block relative bg-[#FAF7F0]" data-export="block" data-size="medium" style="width: 1400px; height: 800px; margin: 0 auto; overflow: hidden;">
+
+      <div class="relative z-10 flex flex-col px-[60px] py-[50px] h-full">
+
+      <!-- Title -->
+      <div class="mb-6">
+        <h1 class="text-[42px] font-semibold text-academic-text mb-3 leading-tight">电机控制状态机设计</h1>
+        <p class="text-[20px] text-academic-secondary">五状态有限状态机，确保行为可预测与安全转换</p>
+      </div>
+
+      <!-- Content -->
+      <div class="flex flex-col justify-center flex-1">
+
+        <!-- Three Elements -->
+        <div class="flex justify-center gap-6 mb-6">
+          <div class="bg-white border-2 border-academic-border rounded-lg px-6 py-3 text-center">
+            <p class="text-xl font-bold text-academic-accent font-mono">State</p>
+            <p class="text-xs text-academic-secondary mt-1">系统所处模式</p>
+          </div>
+          <div class="bg-white border-2 border-academic-border rounded-lg px-6 py-3 text-center">
+            <p class="text-xl font-bold text-academic-accent font-mono">Event</p>
+            <p class="text-xs text-academic-secondary mt-1">触发状态变化信号</p>
+          </div>
+          <div class="bg-white border-2 border-academic-border rounded-lg px-6 py-3 text-center">
+            <p class="text-xl font-bold text-academic-accent font-mono">Transition</p>
+            <p class="text-xs text-academic-secondary mt-1">状态变化规则</p>
+          </div>
+        </div>
+
+        <!-- State Diagram: HTML nodes + SVG connections only -->
+        <div class="bg-white border-2 border-academic-border rounded-lg p-6 mb-6">
+
+          <!-- Row 1: Main Flow -->
+          <div class="flex items-center justify-center gap-3 mb-6">
+
+            <!-- IDLE -->
+            <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg px-5 py-3 text-center min-w-[150px]">
+              <p class="text-xs text-academic-secondary">初始状态</p>
+              <p class="text-lg font-bold text-academic-accent font-mono">IDLE</p>
+              <p class="text-xs text-academic-secondary">继电器断开</p>
+            </div>
+
+            <!-- Arrow: start -->
+            <div class="flex flex-col items-center">
+              <svg width="40" height="12" viewBox="0 0 40 12">
+                <path d="M0 6 L30 6 M26 2 L34 6 L26 10" stroke="#1E40AF" stroke-width="2" fill="none"/>
+              </svg>
+              <span class="text-xs text-academic-accent font-mono font-semibold">start</span>
+            </div>
+
+            <!-- STARTING -->
+            <div class="bg-white border-2 border-academic-border rounded-lg px-5 py-3 text-center min-w-[150px]">
+              <p class="text-xs text-academic-secondary">启动中</p>
+              <p class="text-lg font-bold text-academic-text font-mono">STARTING</p>
+              <p class="text-xs text-academic-secondary">ESC 校准 ~2s</p>
+            </div>
+
+            <!-- Arrow: armed -->
+            <div class="flex flex-col items-center">
+              <svg width="40" height="12" viewBox="0 0 40 12">
+                <path d="M0 6 L30 6 M26 2 L34 6 L26 10" stroke="#1E40AF" stroke-width="2" fill="none"/>
+              </svg>
+              <span class="text-xs text-academic-accent font-mono font-semibold">armed</span>
+            </div>
+
+            <!-- RUNNING -->
+            <div class="bg-[#E8F5E9] border-2 border-[#4CAF50] rounded-lg px-5 py-3 text-center min-w-[150px]">
+              <p class="text-xs text-[#4CAF50]">运行中</p>
+              <p class="text-lg font-bold text-[#2E7D32] font-mono">RUNNING</p>
+              <p class="text-xs text-academic-secondary">PID 闭环</p>
+            </div>
+
+            <!-- Arrow: stop -->
+            <div class="flex flex-col items-center">
+              <svg width="40" height="12" viewBox="0 0 40 12">
+                <path d="M0 6 L30 6 M26 2 L34 6 L26 10" stroke="#475569" stroke-width="2" fill="none"/>
+              </svg>
+              <span class="text-xs text-academic-secondary font-mono font-semibold">stop</span>
+            </div>
+
+            <!-- STOPPING -->
+            <div class="bg-white border-2 border-academic-border rounded-lg px-5 py-3 text-center min-w-[150px]">
+              <p class="text-xs text-academic-secondary">停止中</p>
+              <p class="text-lg font-bold text-academic-text font-mono">STOPPING</p>
+              <p class="text-xs text-academic-secondary">减速停止</p>
+            </div>
+
+          </div>
+
+          <!-- Row 2: Return + Error -->
+          <div class="flex items-start justify-between">
+
+            <!-- Left: auto return -->
+            <div class="flex items-center gap-3 ml-4">
+              <div class="flex flex-col items-center">
+                <svg width="12" height="24" viewBox="0 0 12 24">
+                  <path d="M6 0 L6 18 M2 14 L6 18 L10 14" stroke="#475569" stroke-width="1.5" fill="none"/>
+                </svg>
+                <span class="text-xs text-academic-secondary font-mono font-semibold">auto</span>
+              </div>
+              <p class="text-sm text-academic-secondary">STOPPING → IDLE 自动回归</p>
+            </div>
+
+            <!-- Right: ERROR state -->
+            <div class="flex items-center gap-3">
+              <div class="flex flex-col items-center">
+                <svg width="12" height="24" viewBox="0 0 12 24">
+                  <path d="M6 0 L6 18 M2 14 L6 18 L10 14" stroke="#F44336" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/>
+                </svg>
+                <span class="text-xs text-[#F44336] font-mono font-semibold">error</span>
+              </div>
+              <div class="bg-[#FFEBEE] border-2 border-[#F44336] rounded-lg px-5 py-3 text-center min-w-[150px]">
+                <p class="text-xs text-[#F44336]">错误状态</p>
+                <p class="text-lg font-bold text-[#C62828] font-mono">ERROR</p>
+                <p class="text-xs text-academic-secondary">紧急停机</p>
+              </div>
+              <div class="flex flex-col items-center">
+                <svg width="24" height="12" viewBox="0 0 24 12">
+                  <path d="M0 6 L18 6 M14 2 L22 6 L14 10" stroke="#475569" stroke-width="1.5" fill="none"/>
+                </svg>
+                <span class="text-xs text-academic-secondary font-mono font-semibold">reset</span>
+              </div>
+              <p class="text-sm text-academic-secondary">→ IDLE 复位</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Entry Actions -->
+        <div class="grid grid-cols-2 gap-6">
+
+          <!-- Why Intermediate States -->
+          <div class="bg-white border-2 border-academic-border rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-text mb-3">为什么需要中间状态？</h4>
+            <div class="space-y-2">
+              <div class="flex items-start gap-3">
+                <span class="text-academic-accent font-mono text-sm">1</span>
+                <p class="text-sm text-academic-secondary">ESC 解锁需要约 2 秒</p>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="text-academic-accent font-mono text-sm">2</span>
+                <p class="text-sm text-academic-secondary">电机有惯性，停止不是瞬间</p>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="text-academic-accent font-mono text-sm">3</span>
+                <p class="text-sm text-academic-secondary">防止命令冲突</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Entry Actions -->
+          <div class="bg-[#EFF6FF] border-2 border-academic-accent rounded-lg p-5">
+            <h4 class="text-base font-semibold text-academic-accent mb-3">状态进入动作</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-white border border-academic-border rounded p-2">
+                <p class="text-xs text-academic-secondary">enter_starting()</p>
+                <p class="text-xs text-academic-text">esc_arm() · relay_on()</p>
+              </div>
+              <div class="bg-white border border-academic-border rounded p-2">
+                <p class="text-xs text-academic-secondary">enter_running()</p>
+                <p class="text-xs text-academic-text">pid_enable()</p>
+              </div>
+              <div class="bg-white border border-academic-border rounded p-2">
+                <p class="text-xs text-academic-secondary">enter_stopping()</p>
+                <p class="text-xs text-academic-text">减速 · relay_off()</p>
+              </div>
+              <div class="bg-[#FFEBEE] border border-[#F44336] rounded p-2">
+                <p class="text-xs text-[#F44336]">enter_error()</p>
+                <p class="text-xs text-[#C62828]">esc_stop() · pid_reset()</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Export Module -->
+  <script type="module">
+    import { toPng, toSvg } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm';
+
+    async function exportBlock(id, format = 'png') {
+      const node = document.getElementById(id);
+      if (!node) return;
+
+      // 保存原始 margin
+      const originalMargin = node.style.margin;
+      // 临时移除 margin，确保导出时内容居中
+      node.style.margin = '0';
+
+      const options = {
+        pixelRatio: 2,
+        backgroundColor: '#FAF7F0',
+        filter: (n) => !n.classList?.contains('block-toolbar'),
+        skipFonts: true
+      };
+
+      try {
+        const dataUrl = format === 'svg' ? await toSvg(node, options) : await toPng(node, options);
+        const link = document.createElement('a');
+        link.download = `${id}.${format}`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) { console.error('Export failed:', e); }
+      finally {
+        // 恢复原始 margin
+        node.style.margin = originalMargin;
+      }
+    }
+
+    async function copyBlockHtml(id) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      await navigator.clipboard.writeText(node.outerHTML);
+    }
+
+    document.querySelectorAll('[data-export-block]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlock, 'png'));
+    });
+    document.querySelectorAll('[data-export-block-svg]').forEach(btn => {
+      btn.addEventListener('click', () => exportBlock(btn.dataset.exportBlockSvg, 'svg'));
+    });
+    document.querySelectorAll('[data-copy-block]').forEach(btn => {
+      btn.addEventListener('click', () => copyBlockHtml(btn.dataset.copyBlock));
+    });
+  </script>
+
+</body>
+</html>

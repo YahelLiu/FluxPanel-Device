@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阶段五：状态机与安全保护 - 可视化学习</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a0a0a 0%, #2d1f1f 50%, #1a0f0f 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #e74c3c, #f39c12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { text-align: center; color: #888; margin-bottom: 40px; }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .section h2 { color: #e74c3c; margin-bottom: 20px; font-size: 1.5em; }
+
+        /* 状态机三要素 */
+        .fsm-elements {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .fsm-element {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+        .fsm-element.state { border-top: 4px solid #3498db; }
+        .fsm-element.event { border-top: 4px solid #f39c12; }
+        .fsm-element.transition { border-top: 4px solid #2ecc71; }
+        .fsm-icon { font-size: 3em; margin-bottom: 15px; }
+        .fsm-name { font-size: 1.3em; font-weight: bold; margin-bottom: 10px; }
+        .fsm-desc { color: #888; font-size: 0.9em; }
+
+        /* 状态机图 */
+        .state-diagram {
+            background: #0d0d0d;
+            border-radius: 15px;
+            padding: 40px 20px;
+            position: relative;
+        }
+        .state-node {
+            display: inline-block;
+            padding: 20px 35px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: bold;
+            margin: 10px;
+            position: relative;
+        }
+        .state-node.idle {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border: 3px solid #3498db;
+        }
+        .state-node.starting {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border: 3px solid #f1c40f;
+        }
+        .state-node.running {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            border: 3px solid #58d68d;
+        }
+        .state-node.stopping {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            border: 3px solid #bb8fce;
+        }
+        .state-node.error {
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            border: 3px solid #ec7063;
+        }
+
+        .state-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .state-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .state-arrow {
+            color: #888;
+            font-size: 1.5em;
+        }
+        .state-arrow-label {
+            font-size: 0.8em;
+            color: #f39c12;
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        /* Fail-safe 层次 */
+        .failsafe-layers {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .failsafe-layer {
+            display: flex;
+            align-items: stretch;
+        }
+        .layer-label {
+            width: 100px;
+            background: rgba(231, 76, 60, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-right: 2px solid #e74c3c;
+        }
+        .layer-content {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+        }
+        .protection-badge {
+            background: rgba(231, 76, 60, 0.3);
+            border: 1px solid #e74c3c;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .protection-badge.active {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        /* 报警类型 */
+        .alarm-types {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .alarm-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .alarm-card.overcurrent { border-left: 4px solid #e74c3c; }
+        .alarm-card.overtemp { border-left: 4px solid #f39c12; }
+        .alarm-card.stall { border-left: 4px solid #9b59b6; }
+        .alarm-card.comm { border-left: 4px solid #3498db; }
+        .alarm-icon { font-size: 2em; margin-bottom: 10px; }
+        .alarm-name { font-weight: bold; margin-bottom: 5px; }
+        .alarm-threshold { color: #888; font-size: 0.85em; }
+
+        /* 堵转检测时序 */
+        .stall-timeline {
+            background: #0d0d0d;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .timeline-bar {
+            display: flex;
+            height: 40px;
+            background: #1a1a1a;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .timeline-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+        .timeline-segment.normal { background: #27ae60; }
+        .timeline-segment.detect { background: #f39c12; }
+        .timeline-segment.trigger { background: #e74c3c; }
+        .timeline-segment.stop { background: #9b59b6; }
+
+        .timeline-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            color: #555;
+            font-size: 0.75em;
+        }
+
+        /* 紧急停机流程 */
+        .emergency-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .emergency-step {
+            background: rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .emergency-step.danger {
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+        }
+        .emergency-step.action {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+        .emergency-step.safe {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+        .emergency-arrow {
+            color: #e74c3c;
+            font-size: 1.5em;
+        }
+
+        /* 设计原则 */
+        .principles {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+        .principle-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .principle-num {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #e74c3c, #f39c12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+        }
+        .principle-text { font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>阶段五：状态机与安全保护</h1>
+        <p class="subtitle">Fail-safe 设计 | 可视化学习</p>
+
+        <!-- 状态机三要素 -->
+        <div class="section">
+            <h2>🎛️ 状态机三要素</h2>
+            <div class="fsm-elements">
+                <div class="fsm-element state">
+                    <div class="fsm-icon">📍</div>
+                    <div class="fsm-name">状态 State</div>
+                    <div class="fsm-desc">系统所处的模式<br>IDLE / STARTING / RUNNING / STOPPING / ERROR</div>
+                </div>
+
+                <div class="fsm-element event">
+                    <div class="fsm-icon">⚡</div>
+                    <div class="fsm-name">事件 Event</div>
+                    <div class="fsm-desc">触发状态变化的信号<br>START / STOP / ARMED / ERROR / RESET</div>
+                </div>
+
+                <div class="fsm-element transition">
+                    <div class="fsm-icon">🔄</div>
+                    <div class="fsm-name">转换 Transition</div>
+                    <div class="fsm-desc">状态变化的规则<br>定义何时从一个状态变到另一个</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 状态转换图 -->
+        <div class="section">
+            <h2>🔀 电机状态转换图</h2>
+            <div class="state-diagram">
+                <div class="state-flow">
+                    <div class="state-row">
+                        <div class="state-node idle">
+                            IDLE<br><small>空闲</small>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <span class="state-arrow-label">start</span>
+                            <span class="state-arrow">→</span>
+                        </div>
+                        <div class="state-node starting">
+                            STARTING<br><small>启动中</small>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <span class="state-arrow-label">armed</span>
+                            <span class="state-arrow">→</span>
+                        </div>
+                        <div class="state-node running">
+                            RUNNING<br><small>运行中</small>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:100px;margin-top:30px;">
+                        <div class="state-flow">
+                            <span class="state-arrow">↓</span>
+                            <small style="color:#888;">stop</small>
+                            <div class="state-node stopping">
+                                STOPPING<br><small>停止中</small>
+                            </div>
+                            <span class="state-arrow">↓</span>
+                            <small style="color:#888;">auto</small>
+                            <div class="state-node idle">
+                                IDLE
+                            </div>
+                        </div>
+
+                        <div class="state-flow">
+                            <span class="state-arrow">↓</span>
+                            <small style="color:#e74c3c;">error</small>
+                            <div class="state-node error">
+                                ERROR<br><small>错误</small>
+                            </div>
+                            <span class="state-arrow">↓</span>
+                            <small style="color:#888;">reset</small>
+                            <div class="state-node idle">
+                                IDLE
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fail-safe 层次 -->
+        <div class="section">
+            <h2>🛡️ Fail-safe 多层保护</h2>
+            <div class="failsafe-layers">
+                <div class="failsafe-layer">
+                    <div class="layer-label">Level 1<br>硬件层</div>
+                    <div class="layer-content">
+                        <div class="protection-badge">继电器可控电源</div>
+                        <div class="protection-badge">GPIO 默认低电平</div>
+                        <div class="protection-badge">保险丝保护</div>
+                    </div>
+                </div>
+
+                <div class="failsafe-layer">
+                    <div class="layer-label">Level 2<br>通信层</div>
+                    <div class="layer-content">
+                        <div class="protection-badge active">WebSocket 断开 → 停机</div>
+                        <div class="protection-badge active">命令超时 10s → 停机</div>
+                        <div class="protection-badge active">WiFi 断开 → 停机</div>
+                    </div>
+                </div>
+
+                <div class="failsafe-layer">
+                    <div class="layer-label">Level 3<br>状态机层</div>
+                    <div class="layer-content">
+                        <div class="protection-badge">未校准禁止控制</div>
+                        <div class="protection-badge">状态转换条件明确</div>
+                        <div class="protection-badge">ERROR 状态自动停机</div>
+                    </div>
+                </div>
+
+                <div class="failsafe-layer">
+                    <div class="layer-label">Level 4<br>保护层</div>
+                    <div class="layer-content">
+                        <div class="protection-badge active">过流 >5A → 停机</div>
+                        <div class="protection-badge active">过温 >80°C → 停机</div>
+                        <div class="protection-badge active">堵转 3秒 → 停机</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 报警类型 -->
+        <div class="section">
+            <h2>🚨 报警类型与阈值</h2>
+            <div class="alarm-types">
+                <div class="alarm-card overcurrent">
+                    <div class="alarm-icon">⚡</div>
+                    <div class="alarm-name">过流</div>
+                    <div class="alarm-threshold">ALARM_OVERCURRENT<br>阈值: >5A</div>
+                </div>
+
+                <div class="alarm-card overtemp">
+                    <div class="alarm-icon">🌡️</div>
+                    <div class="alarm-name">过温</div>
+                    <div class="alarm-threshold">ALARM_OVERTEMP<br>阈值: >80°C</div>
+                </div>
+
+                <div class="alarm-card stall">
+                    <div class="alarm-icon">🔧</div>
+                    <div class="alarm-name">堵转</div>
+                    <div class="alarm-threshold">ALARM_STALL<br>PWM>10% & RPM<100</div>
+                </div>
+
+                <div class="alarm-card comm">
+                    <div class="alarm-icon">📡</div>
+                    <div class="alarm-name">通信丢失</div>
+                    <div class="alarm-threshold">ALARM_COMM_LOST<br>超时: 10秒</div>
+                </div>
+            </div>
+
+            <!-- 堵转检测时序 -->
+            <div class="stall-timeline">
+                <h4 style="margin-bottom:15px;color:#f39c12;">堵转检测时序</h4>
+                <div class="timeline-bar">
+                    <div class="timeline-segment normal" style="width:20%;">
+                        正常运行
+                    </div>
+                    <div class="timeline-segment detect" style="width:15%;">
+                        检测到堵转
+                    </div>
+                    <div class="timeline-segment detect" style="width:15%;">
+                        持续监测
+                    </div>
+                    <div class="timeline-segment detect" style="width:15%;">
+                        3秒计时
+                    </div>
+                    <div class="timeline-segment trigger" style="width:10%;">
+                        触发
+                    </div>
+                    <div class="timeline-segment stop" style="width:25%;">
+                        紧急停机
+                    </div>
+                </div>
+                <div class="timeline-labels">
+                    <span>0s</span>
+                    <span>检测条件满足</span>
+                    <span>1s</span>
+                    <span>2s</span>
+                    <span>3s</span>
+                    <span>触发停机</span>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:#888;margin-top:15px;">
+                💡 延时 3 秒可避免瞬时波动误触发，同时确保真实故障能被检测
+            </p>
+        </div>
+
+        <!-- 紧急停机流程 -->
+        <div class="section">
+            <h2>🚨 紧急停机流程</h2>
+            <div class="emergency-flow">
+                <div class="emergency-step danger">
+                    检测到异常<br>
+                    <small>过流/超时/断线</small>
+                </div>
+                <span class="emergency-arrow">→</span>
+                <div class="emergency-step action">
+                    alarm_trigger()<br>
+                    <small>触发报警</small>
+                </div>
+                <span class="emergency-arrow">→</span>
+                <div class="emergency-step action">
+                    esc_stop()<br>
+                    <small>停止 PWM</small>
+                </div>
+                <span class="emergency-arrow">→</span>
+                <div class="emergency-step action">
+                    relay_off()<br>
+                    <small>断开电源</small>
+                </div>
+                <span class="emergency-arrow">→</span>
+                <div class="emergency-step safe">
+                    pid_reset()<br>
+                    <small>重置状态</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设计原则 -->
+        <div class="section">
+            <h2>📐 Fail-safe 设计原则</h2>
+            <div class="principles">
+                <div class="principle-card">
+                    <div class="principle-num">1</div>
+                    <div class="principle-text">默认安全状态<br><small>上电后处于安全状态</small></div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-num">2</div>
+                    <div class="principle-text">故障导向安全<br><small>任何异常都停机</small></div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-num">3</div>
+                    <div class="principle-text">独立检测<br><small>不依赖其他模块</small></div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-num">4</div>
+                    <div class="principle-text">冗余保护<br><small>多层次检测</small></div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-num">5</div>
+                    <div class="principle-text">快速响应<br><small>检测到立即停机</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
