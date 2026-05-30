@@ -29,7 +29,8 @@
       "Bash(git remote *)",
       "Bash(git branch *)",
       "Bash(git push *)",
-      "Bash(git commit -m 'Add MQTT support for IoT data publishing *)"
+      "Bash(git commit -m 'Add MQTT support for IoT data publishing *)",
+      "Bash(git commit -m 'Improve RTOS synchronization mechanisms *)"
     ]
   }
 }

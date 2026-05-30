@@ -1,6 +1,6 @@
-# ESP32-C3 硬件接线指南
+# FluxPanel Device - 硬件接线指南
 
-本文档详细说明 ESP32-C3 BLDC 电机控制系统的所有硬件接线方法。
+本文档详细说明 FluxPanel Device (ESP32-C3) 的所有硬件接线方法。
 
 ---
 
